@@ -136,6 +136,51 @@ std::pair<double, double> finite_range(const cv::Mat_<float>& image) {
     return {minimum, maximum};
 }
 
+std::pair<double, double> percentile_range(
+    const cv::Mat_<float>& image,
+    double low_fraction,
+    double high_fraction) {
+    std::vector<float> samples;
+    samples.reserve(image.total());
+    for (int row = 0; row < image.rows; ++row) {
+        for (int column = 0; column < image.cols; ++column) {
+            const float value = image(row, column);
+            if (std::isfinite(value) && std::abs(value) < 1e30f) {
+                samples.push_back(value);
+            }
+        }
+    }
+    if (samples.empty()) {
+        return {
+            std::numeric_limits<double>::infinity(),
+            -std::numeric_limits<double>::infinity(),
+        };
+    }
+
+    const auto index_for = [&](double fraction) {
+        const double scaled =
+            fraction * static_cast<double>(samples.size() - 1);
+        const auto index = static_cast<std::size_t>(
+            std::clamp(scaled, 0.0, static_cast<double>(samples.size() - 1)));
+        return index;
+    };
+    const std::size_t low_index = index_for(low_fraction);
+    const std::size_t high_index = index_for(high_fraction);
+
+    std::nth_element(
+        samples.begin(),
+        samples.begin() + static_cast<std::ptrdiff_t>(low_index),
+        samples.end());
+    const float low = samples[low_index];
+
+    std::nth_element(
+        samples.begin() + static_cast<std::ptrdiff_t>(low_index),
+        samples.begin() + static_cast<std::ptrdiff_t>(high_index),
+        samples.end());
+    const float high = samples[high_index];
+    return {low, high};
+}
+
 cv::Mat make_linear_display_image(
     const cv::Mat_<float>& image,
     double minimum,
@@ -408,6 +453,10 @@ int run_point_measurement_app(int argc, char** argv) {
     const auto [minimum, maximum] = finite_range(roi);
     std::cout << "ROI 原始值范围: min=" << minimum
               << ", max=" << maximum << std::endl;
+    const auto [display_low, display_high] =
+        percentile_range(roi, 0.02, 0.98);
+    std::cout << "显示拉伸范围: 2%=" << display_low
+              << ", 98%=" << display_high << std::endl;
     if (options.auto_only) {
         return 0;
     }
@@ -436,7 +485,7 @@ int run_point_measurement_app(int argc, char** argv) {
               << " pixel。" << std::endl;
 
     state.display_base =
-        make_linear_display_image(state.image, minimum, maximum);
+        make_linear_display_image(state.image, display_low, display_high);
     cv::resize(
         state.display_base,
         state.display_base,
