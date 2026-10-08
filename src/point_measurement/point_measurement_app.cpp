@@ -162,6 +162,45 @@ cv::Mat make_linear_display_image(
     return display;
 }
 
+void draw_outlined_text(
+    cv::Mat& display,
+    const std::string& text,
+    const cv::Point& origin,
+    double font_scale,
+    int thickness) {
+    int baseline = 0;
+    const auto text_size = cv::getTextSize(
+        text,
+        cv::FONT_HERSHEY_SIMPLEX,
+        font_scale,
+        thickness,
+        &baseline);
+    const double available_width =
+        std::max(1.0, display.cols - static_cast<double>(origin.x) - 10.0);
+    const double fitted_scale =
+        std::max(0.2, font_scale * std::min(
+                                  1.0,
+                                  available_width /
+                                      std::max(1, text_size.width)));
+
+    cv::putText(
+        display,
+        text,
+        origin + cv::Point(1, 1),
+        cv::FONT_HERSHEY_SIMPLEX,
+        fitted_scale,
+        cv::Scalar(0),
+        thickness + 1);
+    cv::putText(
+        display,
+        text,
+        origin,
+        cv::FONT_HERSHEY_SIMPLEX,
+        fitted_scale,
+        cv::Scalar(255),
+        thickness);
+}
+
 void on_mouse(int event, int x, int y, int, void* userdata) {
     if (event != cv::EVENT_LBUTTONDOWN || userdata == nullptr) {
         return;
@@ -302,6 +341,10 @@ int run_point_measurement_app(int argc, char** argv) {
     if (!target_match.has_value()) {
         throw std::runtime_error("目标表中找不到影像: " + image_stem);
     }
+    std::cout << "反射器: " << target_match->target.reflector_id
+              << " (truth_id=" << target_match->target.truth_id << ")\n"
+              << "影像对: " << target_match->target.image_1 << ", "
+              << target_match->target.image_2 << std::endl;
 
     std::cout << "读取真值..." << std::endl;
     const auto truth =
@@ -310,6 +353,10 @@ int run_point_measurement_app(int argc, char** argv) {
         throw std::runtime_error(
             "真值文件中找不到目标: " + target_match->target.truth_id);
     }
+    std::cout << std::setprecision(10)
+              << "真值: longitude=" << truth->longitude_deg
+              << ", latitude=" << truth->latitude_deg
+              << ", height_m=" << truth->height_m << std::endl;
 
     const auto rpc_path = config.rpc_dir / (image_stem + "_rpc.txt");
     if (!std::filesystem::exists(rpc_path)) {
@@ -366,7 +413,9 @@ int run_point_measurement_app(int argc, char** argv) {
         return 0;
     }
 
-    const std::string window_name = "LRRR point measurement";
+    const std::string window_name =
+        "LRRR point measurement - " + target_match->target.reflector_id +
+        " / " + image_stem;
     UiState state;
     state.image = roi;
     state.selected = detection.point;
@@ -426,49 +475,35 @@ int run_point_measurement_app(int argc, char** argv) {
                         << "sample=" << x0 + state.selected.x
                         << " line=" << y0 + state.selected.y;
         const std::string coordinate = coordinate_text.str();
-        cv::putText(
+        const std::string reflector_text =
+            "reflector=" + target_match->target.reflector_id;
+        const std::string image_text = "image=" + image_stem;
+        draw_outlined_text(
             display,
-            coordinate,
-            cv::Point(11, 25),
-            cv::FONT_HERSHEY_SIMPLEX,
-            0.65,
-            cv::Scalar(0),
-            2);
-        cv::putText(
-            display,
-            coordinate,
+            reflector_text,
             cv::Point(10, 24),
-            cv::FONT_HERSHEY_SIMPLEX,
+            0.42,
+            1);
+        draw_outlined_text(
+            display,
+            image_text,
+            cv::Point(10, 48),
+            0.42,
+            1);
+        draw_outlined_text(
+            display,
+            coordinate,
+            cv::Point(10, 72),
             0.65,
-            cv::Scalar(255),
             2);
 
         const std::string help =
             "L-click: move  Arrows: 0.1 px  q: confirm  Esc: cancel";
-        int baseline = 0;
-        const auto help_size = cv::getTextSize(
-            help,
-            cv::FONT_HERSHEY_SIMPLEX,
-            0.45,
-            1,
-            &baseline);
-        const double help_scale =
-            std::min(1.0, (display.cols - 20.0) / std::max(1, help_size.width));
-        cv::putText(
-            display,
-            help,
-            cv::Point(11, display.rows - 11),
-            cv::FONT_HERSHEY_SIMPLEX,
-            0.45 * help_scale,
-            cv::Scalar(0),
-            1);
-        cv::putText(
+        draw_outlined_text(
             display,
             help,
             cv::Point(10, display.rows - 12),
-            cv::FONT_HERSHEY_SIMPLEX,
-            0.45 * help_scale,
-            cv::Scalar(255),
+            0.45,
             1);
         cv::imshow(window_name, display);
 
