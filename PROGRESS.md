@@ -19,8 +19,8 @@
 | P0 | Requirements and data understanding | 已完成 | 100% | Requirement PDF and data inventory complete; data moved to `data/images`, `data/rpc`, and `data/truth` | Keep as reference for implementation |
 | P1 | Technical plan and interfaces | 已完成 | 100% | `TECHNICAL_PLAN.md` v0.22 complete | Implement according to the confirmed interfaces |
 | P2 | Git repository and remote connection | 已完成 | 100% | GitHub remote configured | Maintain one commit per completed code task |
-| P3 | CMake project scaffold | 未开始 | 0% | None | Create root CMake config and module targets |
-| P4 | vcpkg dependency bootstrap | 未开始 | 0% | None | Add manifest, presets, and bootstrap script |
+| P3 | CMake project scaffold | 进行中 | 60% | Root CMake, VS2022 presets, module placeholder, and CTest entry added | Verify configure/build with Visual Studio CMake |
+| P4 | vcpkg dependency bootstrap | 进行中 | 50% | vcpkg manifest added; Visual Studio bundled vcpkg will provide dependencies | Download OpenCV and libtiff during the first configure |
 | P5 | Common module | 未开始 | 0% | None | Implement config, paths, logging, and shared types |
 | P6 | Point measurement module | 未开始 | 0% | None | Implement libtiff ROI reading, auto candidate, and manual UI |
 | P7 | RPC parser and forward model | 未开始 | 0% | None | Implement RPC parsing and RFM forward evaluation |

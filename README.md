@@ -35,6 +35,8 @@ The project supports point measurement, fixed-height LM inversion, two-image LM 
 - vcpkg manifest mode for third-party dependency installation
 - Visual Studio bundled vcpkg is preferred on Windows
 
+Detailed build instructions are in `docs/BUILDING.md`.
+
 ## Data Policy
 
 Large TIFF files and downloaded third-party libraries are not committed.
