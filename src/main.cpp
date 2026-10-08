@@ -14,6 +14,7 @@
 
 namespace {
 
+// 顶层帮助信息只说明有哪些子命令；各子命令的参数由各自的 --help 输出。
 void print_help() {
     std::cout
         << "用法: lunar_rpc_tool <命令> [选项]\n\n"
@@ -48,18 +49,21 @@ int main(int argc, char** argv) {
         }
 
         if (command == "measure") {
+            // 把 measure 后面的参数原样交给量测模块处理。
             return rpc_localization::run_point_measurement_app(
                 argc - 1,
                 argv + 1);
         }
 
         if (command == "localize") {
+            // localize 内部再根据 --method 选择方案一或方案二。
             return rpc_localization::run_rfm_localization_app(
                 argc - 1,
                 argv + 1);
         }
 
         if (command == "evaluate") {
+            // evaluate 必须指定方法，一次只评价一种反算方法。
             return rpc_localization::run_accuracy_evaluation_app(
                 argc - 1,
                 argv + 1);

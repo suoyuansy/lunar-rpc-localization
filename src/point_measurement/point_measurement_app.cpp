@@ -26,6 +26,7 @@
 namespace rpc_localization {
 namespace {
 
+// measure 子命令的输入参数。
 struct Options {
     std::filesystem::path config_path;
     std::filesystem::path image_path;
@@ -36,6 +37,7 @@ struct Options {
     bool show_help = false;
 };
 
+// 交互窗口和判读点在窗口中的状态。
 struct UiState {
     cv::Mat display_base;
     cv::Mat_<float> image;
@@ -45,6 +47,7 @@ struct UiState {
     bool cancelled = false;
 };
 
+// 输出 measure 子命令自己的帮助信息。
 void print_help() {
     std::cout
         << "用法: lunar_rpc_tool measure [选项]\n"
@@ -101,6 +104,7 @@ std::filesystem::path resolve_image_path(
     const Options& options,
     const ProjectConfig& config,
     std::string& image_stem) {
+    // 优先使用 --image 指定的完整路径；否则用 --image-name 和影像目录拼接。
     if (!options.image_path.empty()) {
         image_stem = options.image_path.stem().string();
         return options.image_path;
@@ -122,6 +126,7 @@ std::filesystem::path resolve_image_path(
 }
 
 std::pair<double, double> finite_range(const cv::Mat_<float>& image) {
+    // 计算有效像素的原始范围，排除 NaN、Inf 和 NoData。
     double minimum = std::numeric_limits<double>::infinity();
     double maximum = -std::numeric_limits<double>::infinity();
     for (int row = 0; row < image.rows; ++row) {
@@ -140,6 +145,7 @@ std::pair<double, double> percentile_range(
     const cv::Mat_<float>& image,
     double low_fraction,
     double high_fraction) {
+    // 用 nth_element 求分位值，不需要对整个数组完整排序。
     std::vector<float> samples;
     samples.reserve(image.total());
     for (int row = 0; row < image.rows; ++row) {
@@ -185,6 +191,8 @@ cv::Mat make_linear_display_image(
     const cv::Mat_<float>& image,
     double minimum,
     double maximum) {
+    // 把显示区间线性映射到 0～255。
+    // 区间外自动截断，NoData 保持为黑色。
     cv::Mat display(image.size(), CV_8U, cv::Scalar(0));
     if (!std::isfinite(minimum) || !std::isfinite(maximum) ||
         maximum <= minimum) {
@@ -213,6 +221,8 @@ void draw_outlined_text(
     const cv::Point& origin,
     double font_scale,
     int thickness) {
+    // 先画黑色轮廓，再画白色文字，保证在明暗背景上都能看清。
+    // 如果文字太宽，会自动缩小字号以适配窗口。
     int baseline = 0;
     const auto text_size = cv::getTextSize(
         text,
@@ -247,6 +257,7 @@ void draw_outlined_text(
 }
 
 void on_mouse(int event, int x, int y, int, void* userdata) {
+    // 鼠标坐标是放大后的窗口坐标，需要除以缩放倍数还原成 ROI 坐标。
     if (event != cv::EVENT_LBUTTONDOWN || userdata == nullptr) {
         return;
     }
@@ -277,6 +288,7 @@ bool is_down_key(int key) {
     return key == 84 || key == 2621440;
 }
 
+// 扫描目录中的 TIFF，并按文件名排序，保证批量处理顺序稳定。
 std::vector<std::filesystem::path> list_tiff_files(
     const std::filesystem::path& directory) {
     if (!std::filesystem::exists(directory)) {
@@ -324,6 +336,8 @@ int run_point_measurement_app(int argc, char** argv) {
 
     if (options.image_path.empty() && options.image_name.empty() &&
         !options.image_dir.empty()) {
+        // 只给 --image-dir 时进入目录批量模式，
+        // 每景确认保存后再进入下一景。
         const auto files = list_tiff_files(options.image_dir);
         if (files.empty()) {
             throw std::runtime_error(
@@ -414,6 +428,7 @@ int run_point_measurement_app(int argc, char** argv) {
     std::cout << "读取 TIFF 元数据..." << std::endl;
     const TiffInfo info = read_tiff_info(image_path);
 
+    // 根据配置的米制范围除以地面分辨率，得到 ROI 的像素边长。
     const int roi_side = std::max(
         16,
         static_cast<int>(std::lround(config.roi_size_m /
@@ -467,6 +482,7 @@ int run_point_measurement_app(int argc, char** argv) {
     UiState state;
     state.image = roi;
     state.selected = detection.point;
+    // 目标显示边长固定约 900 像素，使不同分辨率的影像具有相近可视尺寸。
     constexpr double target_display_side = 900.0;
     const double source_side =
         static_cast<double>(std::max(roi_width, roi_height));

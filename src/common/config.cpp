@@ -12,6 +12,7 @@ namespace rpc_localization {
 namespace {
 
 std::string trim(const std::string& value) {
+    // 去掉字符串首尾的空格、制表符和换行符，统一配置文本格式。
     const auto begin = value.find_first_not_of(" \t\r\n");
     if (begin == std::string::npos) {
         return {};
@@ -21,6 +22,7 @@ std::string trim(const std::string& value) {
 }
 
 std::vector<std::string> split_commas(const std::string& line) {
+    // targets.csv 使用简单逗号分隔，不处理带引号的复杂 CSV。
     std::vector<std::string> fields;
     std::stringstream stream(line);
     std::string field;
@@ -33,6 +35,7 @@ std::vector<std::string> split_commas(const std::string& line) {
 std::filesystem::path resolve_against_root(
     const std::filesystem::path& root,
     const std::string& value_text) {
+    // 相对路径按项目根目录解析，绝对路径保持原样。
     const auto value = std::filesystem::u8path(value_text);
     if (value.is_absolute()) {
         return value;
@@ -43,6 +46,7 @@ std::filesystem::path resolve_against_root(
 }  // namespace
 
 std::filesystem::path find_project_root(const std::filesystem::path& start) {
+    // 从当前目录逐级向上查找，避免程序必须从固定目录启动。
     std::filesystem::path current = std::filesystem::absolute(start);
     if (!std::filesystem::is_directory(current)) {
         current = current.parent_path();
@@ -68,6 +72,7 @@ std::filesystem::path find_project_root(const std::filesystem::path& start) {
 }
 
 ProjectConfig load_project_config(const std::filesystem::path& config_path) {
+    // 先建立默认路径，再用 rpc_project.ini 中的配置覆盖。
     const auto root = find_project_root(
         config_path.empty() ? std::filesystem::current_path()
                             : config_path.parent_path());
@@ -93,6 +98,7 @@ ProjectConfig load_project_config(const std::filesystem::path& config_path) {
 
     std::string line;
     while (std::getline(input, line)) {
+        // 支持空行、# 注释和 ; 注释。
         line = trim(line);
         if (line.empty() || line[0] == '#' || line[0] == ';') {
             continue;
@@ -121,6 +127,7 @@ ProjectConfig load_project_config(const std::filesystem::path& config_path) {
         } else if (key == "truth_file") {
             config.truth_file = resolve_against_root(root, value);
         } else if (key == "roi_size_m") {
+            // 判读窗口边长，单位为米。
             config.roi_size_m = std::stod(value);
         }
     }
@@ -130,6 +137,7 @@ ProjectConfig load_project_config(const std::filesystem::path& config_path) {
 
 std::vector<TargetDefinition> load_target_table(
     const std::filesystem::path& path) {
+    // 第一行固定为表头，从第二行开始解析数据。
     std::ifstream input = open_input_file(path);
     if (!input) {
         throw std::runtime_error("无法打开目标表: " + path.u8string());
@@ -165,6 +173,7 @@ std::vector<TargetDefinition> load_target_table(
 std::optional<ImageTargetMatch> find_target_by_image(
     const std::vector<TargetDefinition>& targets,
     const std::string& image_name) {
+    // 同一影像只会出现在目标表的一个目标行中。
     for (const auto& target : targets) {
         if (target.image_1 == image_name) {
             return ImageTargetMatch{target, image_name, target.resolution_1_mpp};
@@ -177,6 +186,7 @@ std::optional<ImageTargetMatch> find_target_by_image(
 }
 
 std::vector<GeoPoint> load_truth_points(const std::filesystem::path& path) {
+    // 真值文件每行至少包含：编号、经度、纬度、高程。
     std::ifstream input = open_input_file(path);
     if (!input) {
         throw std::runtime_error("无法打开真值文件: " + path.u8string());
@@ -199,6 +209,7 @@ std::vector<GeoPoint> load_truth_points(const std::filesystem::path& path) {
 std::optional<GeoPoint> find_truth_by_id(
     const std::filesystem::path& path,
     const std::string& truth_id) {
+    // 按真值编号匹配；表头行会因为无法解析为浮点数而自动跳过。
     std::ifstream input = open_input_file(path);
     if (!input) {
         throw std::runtime_error("无法打开真值文件: " + path.u8string());
@@ -220,6 +231,7 @@ std::optional<GeoPoint> find_truth_by_id(
 }
 
 void ensure_parent_directory(const std::filesystem::path& path) {
+    // 只创建父目录，不判断目标文件是否已经存在。
     const auto parent = path.parent_path();
     if (!parent.empty()) {
         std::filesystem::create_directories(parent);

@@ -18,6 +18,7 @@ using ResidualFunction =
 using JacobianFunction =
     std::function<std::vector<double>(const std::vector<double>&)>;
 
+// LM 内部结果，最后会转换成对外的 RfmSolution。
 struct LmResult {
     std::vector<double> x;
     bool converged = false;
@@ -27,6 +28,7 @@ struct LmResult {
 };
 
 double squared_norm(const std::vector<double>& values) {
+    // 残差平方和，是 LM 的目标函数。
     double result = 0.0;
     for (double value : values) {
         result += value * value;
@@ -42,6 +44,8 @@ bool solve_linear_system(
     std::vector<double> matrix,
     std::vector<double> right_hand_side,
     std::vector<double>& solution) {
+    // 使用带主元选择的高斯消元求解 2×2 或 3×3 小矩阵。
+    // 主元过小说明方程病态或接近奇异，返回 false。
     const int size = static_cast<int>(right_hand_side.size());
     for (int column = 0; column < size; ++column) {
         int pivot = column;
@@ -99,6 +103,7 @@ double condition_number(
     const std::vector<double>& jacobian,
     int rows,
     int columns) {
+    // 对雅可比矩阵做 SVD，用最大奇异值除以最小奇异值得到条件数。
     if (jacobian.empty() || rows <= 0 || columns <= 0) {
         return std::numeric_limits<double>::infinity();
     }
@@ -134,6 +139,11 @@ LmResult solve_lm(
     int parameter_columns,
     const ResidualFunction& residual_function,
     const JacobianFunction& jacobian_function) {
+    // LM 主迭代：
+    // 1. 计算残差和雅可比；
+    // 2. 构造 J^T J 和梯度 J^T r；
+    // 3. 加阻尼后求解增量；
+    // 4. 只有残差下降才接受该步，否则增大阻尼重试。
     constexpr int max_iterations = 100;
     constexpr double residual_tolerance = 1e-6;
     constexpr double step_tolerance = 1e-10;
@@ -182,6 +192,7 @@ LmResult solve_lm(
         for (int attempt = 0; attempt < max_damping_attempts; ++attempt) {
             std::vector<double> damped_matrix = normal_matrix;
             for (int i = 0; i < parameter_columns; ++i) {
+                // D 取法方程对角线，避免经纬度和高程量纲不同导致阻尼失衡。
                 const double diagonal =
                     std::max(normal_matrix[i * parameter_columns + i], 1e-12);
                 damped_matrix[i * parameter_columns + i] += damping * diagonal;
@@ -228,6 +239,8 @@ LmResult solve_lm(
 
         const double rms =
             std::sqrt(cost / static_cast<double>(residual_rows));
+        // 当前版本把“残差足够小”或“参数增量足够小”都视为数值收敛。
+        // 因此 converged 表示 LM 已停止迭代，不单独保证定位精度很高。
         if (rms < residual_tolerance || accepted_step_norm < step_tolerance) {
             result.converged = true;
             break;
@@ -247,6 +260,7 @@ PixelPoint forward_with_height_delta(
     const std::vector<double>& x,
     int column,
     double delta) {
+    // 数值求导辅助函数：只扰动当前列对应的参数。
     GeoPoint point{x[0], x[1], x[2]};
     if (column == 0) {
         point.longitude_deg += delta;
@@ -264,6 +278,7 @@ RfmSolution solve_fixed_height(
     const RpcModel& rpc,
     const PixelPoint& observed,
     double fixed_height_m) {
+    // 未知量为经度、纬度；高程固定为用户提供的高程。
     const std::vector<double> initial = {
         rpc.longitude_offset(),
         rpc.latitude_offset(),
@@ -279,6 +294,7 @@ RfmSolution solve_fixed_height(
     };
 
     const auto jacobian_function = [&](const std::vector<double>& x) {
+        // 用前向差分近似偏导数，步长单位与经纬度一致（度）。
         constexpr double latitude_longitude_step = 1e-7;
         const PixelPoint base =
             rpc.forward(GeoPoint{x[0], x[1], fixed_height_m});
@@ -319,6 +335,7 @@ RfmSolution solve_two_image(
     const PixelPoint& observed_1,
     const PixelPoint& observed_2,
     const GeoPoint& initial) {
+    // 未知量为经度、纬度、高程；两景影像各提供两个像点方程。
     const std::vector<double> initial_parameters = {
         initial.longitude_deg,
         initial.latitude_deg,
@@ -338,6 +355,7 @@ RfmSolution solve_two_image(
     };
 
     const auto jacobian_function = [&](const std::vector<double>& x) {
+        // 经度、纬度用角度步长，高程用米步长。
         constexpr double latitude_longitude_step = 1e-7;
         constexpr double height_step = 1e-3;
         const GeoPoint point{x[0], x[1], x[2]};

@@ -35,6 +35,7 @@ struct Options {
     bool show_help = false;
 };
 
+// 从 RFM 结果 TXT 中读出的基础字段。
 struct ResultRecord {
     std::filesystem::path path;
     std::string reflector_id;
@@ -43,6 +44,7 @@ struct ResultRecord {
     GeoPoint solved;
 };
 
+// 一条结果与对应真值比较后的误差记录。
 struct AccuracyRecord {
     ResultRecord result;
     GeoPoint truth;
@@ -55,6 +57,7 @@ struct AccuracyRecord {
     double distance_3d_m = 0.0;
 };
 
+// 一组结果的统计量。
 struct Statistics {
     std::string scope;
     std::size_t count = 0;
@@ -65,6 +68,7 @@ struct Statistics {
 };
 
 std::string trim(const std::string& value) {
+    // 去掉文本首尾空白，兼容不同编辑器写出的 TXT。
     const auto begin = value.find_first_not_of(" \t\r\n");
     if (begin == std::string::npos) {
         return {};
@@ -138,6 +142,7 @@ Options parse_options(int argc, char** argv) {
 }
 
 ResultRecord read_result(const std::filesystem::path& path) {
+    // 读取并检查 RFM 结果文件必需字段。
     std::ifstream input = open_input_file(path);
     if (!input) {
         throw std::runtime_error("无法打开 RFM 结果文件: " + path.u8string());
@@ -179,6 +184,7 @@ ResultRecord read_result(const std::filesystem::path& path) {
 
 std::vector<std::filesystem::path> txt_files_in_directory(
     const std::filesystem::path& directory) {
+    // 只扫描目录第一层的 .txt 文件，并按文件名排序。
     if (!std::filesystem::exists(directory)) {
         throw std::runtime_error(
             "结果目录不存在: " + directory.u8string());
@@ -211,6 +217,8 @@ std::vector<std::filesystem::path> collect_result_files(
     const Options& options,
     const ProjectConfig& config,
     const std::string& method) {
+    // 指定了 --input 或 --result-dir 时使用用户输入；
+    // 否则只扫描当前评价方法对应的默认目录。
     std::vector<std::filesystem::path> files = options.inputs;
     std::vector<std::filesystem::path> result_dirs = options.result_dirs;
     if (files.empty() && result_dirs.empty()) {
@@ -252,6 +260,7 @@ std::vector<std::filesystem::path> collect_result_files(
 AccuracyRecord evaluate_record(
     const ResultRecord& result,
     const GeoPoint& truth) {
+    // 按月球局部切平面计算东西、南北和高程方向误差。
     AccuracyRecord record;
     record.result = result;
     record.truth = truth;
@@ -267,6 +276,7 @@ AccuracyRecord evaluate_record(
     const double mean_height_m =
         0.5 * (result.solved.height_m + truth.height_m);
     const double radius = kMoonRadiusM + mean_height_m;
+    // 经度差要乘以 cos(纬度)，纬度差不需要。
     record.east_error_m =
         radius * std::cos(mean_latitude_rad) *
         record.delta_longitude_deg * kPi / 180.0;
@@ -284,6 +294,7 @@ AccuracyRecord evaluate_record(
 Statistics compute_statistics(
     const std::string& scope,
     const std::vector<const AccuracyRecord*>& records) {
+    // 计算平均值和 RMSE。RMSE 对大误差更敏感。
     Statistics statistics;
     statistics.scope = scope;
     statistics.count = records.size();
@@ -315,6 +326,7 @@ Statistics compute_statistics(
 void write_statistics_table(
     std::ostringstream& report,
     const std::vector<Statistics>& statistics) {
+    // 输出 Markdown 表格，便于在 GitHub 或 Markdown 编辑器中查看。
     report << "| scope | count | mean_horizontal_m | rmse_horizontal_m "
               "| mean_3d_m | rmse_3d_m |\n";
     report << "|---|---:|---:|---:|---:|---:|\n";
@@ -343,6 +355,8 @@ void write_report(
 }  // namespace
 
 int run_accuracy_evaluation_app(int argc, char** argv) {
+    // evaluate 一次只评价一种方法，保证 fixed_height 和 two_image
+    // 的报告相互独立。
     const Options options = parse_options(argc, argv);
     if (options.show_help) {
         print_help();
@@ -365,6 +379,7 @@ int run_accuracy_evaluation_app(int argc, char** argv) {
     const auto targets = load_target_table(config.target_table);
 
     std::unordered_map<std::string, std::string> truth_ids;
+    // 结果文件写的是 reflector_id，需要先通过 targets.csv 映射到 truth_id。
     for (const auto& target : targets) {
         truth_ids[target.reflector_id] = target.truth_id;
     }
@@ -411,6 +426,7 @@ int run_accuracy_evaluation_app(int argc, char** argv) {
     }
 
     std::vector<Statistics> grouped_statistics;
+    // 按反射器分组统计，再给出该方法全部结果的总体统计。
     for (const auto& [reflector_id, group] : reflector_groups) {
         grouped_statistics.push_back(compute_statistics(
             "reflector=" + reflector_id,

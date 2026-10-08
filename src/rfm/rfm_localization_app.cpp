@@ -34,12 +34,14 @@ struct Options {
     bool show_help = false;
 };
 
+// 方案二读取方案一结果时，只需要经纬度作为初值。
 struct InitialPoint {
     double longitude_deg = 0.0;
     double latitude_deg = 0.0;
 };
 
 std::string trim(const std::string& value) {
+    // 去掉配置文本和结果文本首尾的空白字符。
     const auto begin = value.find_first_not_of(" \t\r\n");
     if (begin == std::string::npos) {
         return {};
@@ -49,6 +51,7 @@ std::string trim(const std::string& value) {
 }
 
 double parse_double(const std::string& text, const std::string& context) {
+    // 解析浮点数；失败时把字段上下文一并写入错误信息。
     try {
         std::size_t consumed = 0;
         const double value = std::stod(text, &consumed);
@@ -62,6 +65,7 @@ double parse_double(const std::string& text, const std::string& context) {
 }
 
 std::string image_stem(const std::string& image_name) {
+    // 统一去掉 .tif/.tiff 后缀，方便拼接 RPC、量测和结果文件名。
     return std::filesystem::path(image_name).stem().string();
 }
 
@@ -88,6 +92,7 @@ void print_help() {
 }
 
 Options parse_options(int argc, char** argv) {
+    // 只负责收集命令行参数，具体规则在 run_* 函数中检查。
     Options options;
     for (int i = 1; i < argc; ++i) {
         const std::string argument = argv[i];
@@ -124,6 +129,7 @@ Options parse_options(int argc, char** argv) {
 }
 
 PixelPoint read_measurement(const std::filesystem::path& path) {
+    // 量测文件固定只包含 sample=... 和 line=... 两行。
     std::ifstream input = open_input_file(path);
     if (!input) {
         throw std::runtime_error("无法打开量测文件: " + path.u8string());
@@ -157,6 +163,7 @@ PixelPoint read_measurement(const std::filesystem::path& path) {
 }
 
 InitialPoint read_initial_point(const std::filesystem::path& path) {
+    // 方案二只需要方案一结果中的经纬度作为初值。
     std::ifstream input = open_input_file(path);
     if (!input) {
         throw std::runtime_error(
@@ -199,6 +206,7 @@ void write_result(
     const std::string& method,
     const std::vector<std::string>& source_images,
     const RfmSolution& solution) {
+    // 统一输出 RFM 结果字段，精度评定模块按这些字段读取。
     ensure_parent_directory(path);
     std::ofstream output = open_output_file(path);
     if (!output) {
@@ -228,6 +236,7 @@ void print_solution(
     const std::string& label,
     const std::string& reflector_id,
     const RfmSolution& solution) {
+    // 打印迭代状态、残差、条件数和最终经纬度高程。
     std::cout << label << " reflector_id=" << reflector_id
               << ", converged=" << (solution.converged ? "true" : "false")
               << ", iterations=" << solution.iterations
@@ -255,6 +264,7 @@ std::optional<TargetDefinition> find_target_by_id(
 
 std::set<std::string> normalized_image_set(
     const std::vector<std::string>& image_names) {
+    // 比较目标表和命令行影像时忽略扩展名及顺序。
     std::set<std::string> result;
     for (const auto& image_name : image_names) {
         result.insert(image_stem(image_name));
@@ -279,6 +289,7 @@ void run_fixed_height(
     const Options& options,
     const ProjectConfig& config,
     const std::vector<TargetDefinition>& targets) {
+    // 方案一：单景、固定高程，只反算经纬度。
     if (options.image_names.size() != 1) {
         throw std::runtime_error(
             "fixed_height 必须且只能指定一处 --image-name");
@@ -347,6 +358,7 @@ void run_two_image(
     const Options& options,
     const ProjectConfig& config,
     const std::vector<TargetDefinition>& targets) {
+    // 方案二：同一目标两景影像联合求解经纬度和高程。
     TargetDefinition target;
     bool has_target = false;
 
@@ -414,6 +426,7 @@ void run_two_image(
     std::vector<RpcModel> rpc_models;
     std::vector<InitialPoint> initial_points;
 
+    // 两景影像都必须已有量测文件、RPC 文件和方案一初值结果。
     for (const auto& image : image_names) {
         const auto measurement_path =
             measurement_dir / (image + "_point_measurement.txt");
@@ -446,6 +459,7 @@ void run_two_image(
     initial.latitude_deg =
         0.5 * (initial_points[0].latitude_deg +
                initial_points[1].latitude_deg);
+    // 初值高程不使用真值，避免方案二依赖真值高程。
     initial.height_m =
         0.5 * (rpc_models[0].height_offset() +
                rpc_models[1].height_offset());
@@ -484,6 +498,7 @@ void run_all_fixed_height(
     const Options& options,
     const ProjectConfig& config,
     const std::vector<TargetDefinition>& targets) {
+    // 固定高程批量模式：遍历 targets.csv 中的全部影像。
     std::vector<std::pair<std::string, std::string>> images;
     images.reserve(targets.size() * 2);
     for (const auto& target : targets) {
@@ -523,6 +538,7 @@ void run_all_two_image(
     const Options& options,
     const ProjectConfig& config,
     const std::vector<TargetDefinition>& targets) {
+    // 双影像批量模式：遍历 targets.csv 中的全部目标。
     std::size_t success_count = 0;
     std::size_t failure_count = 0;
     for (std::size_t i = 0; i < targets.size(); ++i) {
@@ -555,6 +571,7 @@ void run_all_two_image(
 }  // namespace
 
 int run_rfm_localization_app(int argc, char** argv) {
+    // localize 统一入口：先解析公共参数，再按 method 分发。
     const Options options = parse_options(argc, argv);
     if (options.show_help) {
         print_help();
@@ -567,6 +584,7 @@ int run_rfm_localization_app(int argc, char** argv) {
     }
     if (options.all &&
         (!options.target.empty() || !options.image_names.empty())) {
+        // 批量模式由目标表自动决定影像，不允许再叠加单项筛选。
         throw std::runtime_error(
             "--all 不能与 --target 或 --image-name 同时使用");
     }

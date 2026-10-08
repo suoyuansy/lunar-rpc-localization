@@ -11,6 +11,7 @@
 namespace rpc_localization {
 namespace {
 
+// 计算中位数。这里会复制输入，不影响调用者的数据。
 double median(std::vector<float> values) {
     if (values.empty()) {
         return 0.0;
@@ -25,6 +26,8 @@ double median(std::vector<float> values) {
     return 0.5 * (low + high);
 }
 
+// 计算 MAD（中位数绝对偏差）。
+// MAD 对异常值不敏感，用来估计局部噪声强度。
 double robust_mad(const cv::Mat_<float>& values) {
     std::vector<float> samples;
     samples.reserve(values.total());
@@ -43,11 +46,14 @@ double robust_mad(const cv::Mat_<float>& values) {
     return median(samples);
 }
 
+// 候选点离理论中心越近，得分越高；距离太远时得分快速衰减。
 double distance_score(double distance, int width, int height) {
     const double sigma = 0.25 * std::min(width, height);
     return std::exp(-0.5 * (distance * distance) / (sigma * sigma));
 }
 
+// 估计候选点的形状是否像一个紧凑的小亮斑。
+// 统计 7×7 邻域内高于半峰值的像素数量，越接近 3 个像素得分越高。
 double shape_score(const cv::Mat_<float>& response, int x, int y, double peak) {
     int area = 0;
     const int radius = 3;
@@ -68,6 +74,7 @@ double shape_score(const cv::Mat_<float>& response, int x, int y, double peak) {
     return std::exp(-0.5 * std::pow((area - preferred_area) / sigma, 2.0));
 }
 
+// 统计候选点在几个高斯尺度上都能达到显著响应。
 int scale_hits(
     const std::vector<cv::Mat_<float>>& scale_scores,
     int x,
@@ -81,6 +88,8 @@ int scale_hits(
     return hits;
 }
 
+// 用三点抛物线插值估计峰值相对整数位置的偏移，
+// 从而把候选点从整数像素细化到亚像素。
 double parabolic_offset(double left, double center, double right) {
     const double denominator = left - 2.0 * center + right;
     if (!std::isfinite(denominator) || std::abs(denominator) < 1e-12) {
@@ -103,6 +112,7 @@ DetectionResult detect_single_candidate(
         throw std::runtime_error("检测输入影像为空");
     }
 
+    // 复制一份数据，后续只对副本做 NoData 填充和滤波。
     cv::Mat_<float> clean = image.clone();
     std::vector<float> finite_values;
     finite_values.reserve(clean.total());
@@ -115,11 +125,13 @@ DetectionResult detect_single_candidate(
         }
     }
     if (finite_values.empty()) {
+        // 没有任何有效像素时，只能返回理论中心并标记低置信度。
         return DetectionResult{cv::Point2d(expected_center),
                                0.0,
                                true};
     }
     const float fill_value = static_cast<float>(median(finite_values));
+    // NoData 用中位数填充，避免极端值影响高斯背景估计。
     for (int row = 0; row < clean.rows; ++row) {
         for (int column = 0; column < clean.cols; ++column) {
             const float value = clean(row, column);
@@ -132,6 +144,7 @@ DetectionResult detect_single_candidate(
     std::vector<cv::Mat_<float>> scale_scores;
     cv::Mat_<float> combined(clean.size(), 0.0f);
 
+    // 分别在 1、2、4 像素尺度上估计背景，并计算高通响应。
     for (double sigma : {1.0, 2.0, 4.0}) {
         cv::Mat_<float> background;
         cv::GaussianBlur(clean, background, cv::Size(), sigma, sigma);
@@ -151,6 +164,7 @@ DetectionResult detect_single_candidate(
     }
 
     cv::Mat_<float> local_maximum;
+    // 5×5 膨胀用于寻找局部极大值，避免同一亮斑产生多个候选点。
     cv::dilate(
         combined,
         local_maximum,
@@ -167,6 +181,7 @@ DetectionResult detect_single_candidate(
                 continue;
             }
 
+            // 理论像点只作为先验中心，通过 proximity 项参与评分。
             const double distance = cv::norm(
                 cv::Point2d(column, row) - expected_center);
             const double contrast = std::min(peak / 8.0, 1.0);
@@ -176,6 +191,7 @@ DetectionResult detect_single_candidate(
                                  3.0;
             const double proximity = distance_score(
                 distance, combined.cols, combined.rows);
+            // 综合评分：峰值强度、形状、尺度稳定性和与理论中心的距离。
             const double total =
                 0.45 * contrast + 0.20 * shape + 0.20 * scale + 0.15 * proximity;
 
@@ -192,6 +208,7 @@ DetectionResult detect_single_candidate(
 
     const int best_x = static_cast<int>(std::lround(best_point.x));
     const int best_y = static_cast<int>(std::lround(best_point.y));
+    // 对最高分点做横向、纵向抛物线插值，得到亚像素坐标。
     if (best_x > 0 && best_x + 1 < combined.cols &&
         best_y > 0 && best_y + 1 < combined.rows) {
         best_point.x += parabolic_offset(
