@@ -21,6 +21,7 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace rpc_localization {
 namespace {
@@ -50,7 +51,7 @@ void print_help() {
         << "  --config <文件>       指定 rpc_project.ini\n"
         << "  --image <文件>        直接指定原始 TIFF\n"
         << "  --image-name <名称>   用配置目录查找 TIFF\n"
-        << "  --image-dir <目录>    覆盖影像目录\n"
+        << "  --image-dir <目录>    覆盖目录；单独使用时批量处理所有 TIFF\n"
         << "  --output-dir <目录>   覆盖量测输出目录\n"
         << "  --auto-only           只打印自动候选，不打开窗口，不写结果\n"
         << "  --help                显示帮助\n\n"
@@ -192,6 +193,39 @@ bool is_down_key(int key) {
     return key == 84 || key == 2621440;
 }
 
+std::vector<std::filesystem::path> list_tiff_files(
+    const std::filesystem::path& directory) {
+    if (!std::filesystem::exists(directory)) {
+        throw std::runtime_error(
+            "影像目录不存在: " + directory.u8string());
+    }
+    if (!std::filesystem::is_directory(directory)) {
+        throw std::runtime_error(
+            "影像目录不是文件夹: " + directory.u8string());
+    }
+
+    std::vector<std::filesystem::path> files;
+    for (const auto& entry :
+         std::filesystem::directory_iterator(directory)) {
+        if (!entry.is_regular_file()) {
+            continue;
+        }
+        const std::string extension =
+            entry.path().extension().string();
+        if (extension == ".tif" || extension == ".tiff" ||
+            extension == ".TIF" || extension == ".TIFF") {
+            files.push_back(entry.path());
+        }
+    }
+    std::sort(
+        files.begin(),
+        files.end(),
+        [](const auto& left, const auto& right) {
+            return left.filename().u8string() < right.filename().u8string();
+        });
+    return files;
+}
+
 }  // namespace
 
 int run_point_measurement_app(int argc, char** argv) {
@@ -203,6 +237,58 @@ int run_point_measurement_app(int argc, char** argv) {
 
     std::cout << "读取项目参数..." << std::endl;
     const ProjectConfig config = load_project_config(options.config_path);
+
+    if (options.image_path.empty() && options.image_name.empty() &&
+        !options.image_dir.empty()) {
+        const auto files = list_tiff_files(options.image_dir);
+        if (files.empty()) {
+            throw std::runtime_error(
+                "影像目录中没有 TIFF 文件: " +
+                options.image_dir.u8string());
+        }
+
+        std::cout << "批量模式: 共发现 " << files.size()
+                  << " 景影像，按文件名顺序处理。" << std::endl;
+        for (std::size_t i = 0; i < files.size(); ++i) {
+            std::cout << "\n[" << (i + 1) << '/' << files.size() << "] "
+                      << files[i].filename().u8string() << std::endl;
+
+            std::vector<std::string> child_arguments = {
+                "measure",
+                "--image",
+                files[i].u8string(),
+            };
+            if (!options.config_path.empty()) {
+                child_arguments.push_back("--config");
+                child_arguments.push_back(options.config_path.u8string());
+            }
+            if (!options.output_dir.empty()) {
+                child_arguments.push_back("--output-dir");
+                child_arguments.push_back(options.output_dir.u8string());
+            }
+            if (options.auto_only) {
+                child_arguments.push_back("--auto-only");
+            }
+
+            std::vector<char*> child_argv;
+            child_argv.reserve(child_arguments.size() + 1);
+            for (std::string& argument : child_arguments) {
+                child_argv.push_back(argument.data());
+            }
+            child_argv.push_back(nullptr);
+
+            const int result = run_point_measurement_app(
+                static_cast<int>(child_arguments.size()),
+                child_argv.data());
+            if (result != 0) {
+                return result;
+            }
+        }
+        std::cout << "\n批量量测完成，共处理 " << files.size()
+                  << " 景影像。" << std::endl;
+        return 0;
+    }
+
     std::string image_stem;
     const auto image_path = resolve_image_path(options, config, image_stem);
     std::cout << "影像路径: " << image_path.u8string() << std::endl;
