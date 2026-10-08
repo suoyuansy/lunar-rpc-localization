@@ -25,7 +25,7 @@ build\vs2022-x64-release\bin\lunar_rpc_tool.exe
 - Build scaffold: complete.
 - Unified CLI: one `lunar_rpc_tool` executable dispatches `measure`, `localize`, and `evaluate`.
 - Point measurement module: initial implementation complete; supports TIFF ROI reading, subpixel automatic candidate detection, single-channel 8-bit display using a linear ROI min-max mapping, mouse/0.1-pixel arrow-key adjustment, `q` confirmation, automatic overwrite, and decimal TXT output.
-- RPC inverse and accuracy modules: not started.
+- RPC inverse modules: `fixed_height` and `two_image` localize commands implemented; accuracy evaluation is not started.
 - Build output contains one project executable; module `.cpp` files are compiled directly and no `rpc_*.lib` files are emitted.
 
 ## Planned Modules

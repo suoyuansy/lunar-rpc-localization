@@ -1,7 +1,7 @@
 # Project Progress
 
 > **Last updated:** 2026-10-08
-> **Plan version:** v0.33
+> **Plan version:** v0.34
 
 ## Status Legend
 
@@ -17,15 +17,15 @@
 | ID | Module or Task | Status | Progress | Current Result | Next Step |
 |---|---|---:|---|---|---|
 | P0 | Requirements and data understanding | 已完成 | 100% | Requirement PDF and data inventory complete; data moved to `data/images`, `data/rpc`, and `data/truth` | Keep as reference for implementation |
-| P1 | Technical plan and interfaces | 已完成 | 100% | `TECHNICAL_PLAN.md` v0.33 complete | Implement according to the confirmed interfaces |
+| P1 | Technical plan and interfaces | 已完成 | 100% | `TECHNICAL_PLAN.md` v0.34 complete | Implement according to the confirmed interfaces |
 | P2 | Git repository and remote connection | 已完成 | 100% | GitHub remote configured | Maintain one commit per completed code task |
 | P3 | CMake project scaffold | 已完成 | 100% | MSVC 19.44 Debug/Release configure/build passed with Visual Studio CMake and Ninja; module sources compile directly into one executable, and artifacts are emitted under `build/<preset>/bin` without project-internal `.lib` files | Keep the single-target scaffold stable |
 | P4 | Local third-party dependency setup | 已完成 | 100% | OpenCV 4.12.0 copied into `third_party/opencv`; libtiff 4.7.2 core installed into `third_party/libtiff` | Keep binaries local and ignored by Git |
 | P5 | Common module | 已完成 | 100% | Configuration, path resolution, target/truth parsing, shared types implemented | Extend shared utilities only when later modules need them |
 | P6 | Point measurement module | 进行中 | 99% | TIFF ROI reading, 200 m default window, subpixel automatic candidate, single-channel 8-bit display via linear ROI min-max mapping without percentile stretch or BGR conversion, 0.1 pixel arrow adjustment, `q` confirmation, automatic overwrite, decimal TXT output, and unified `lunar_rpc_tool measure` entry implemented | Perform final interactive measurements and tuning |
-| P7 | RPC parser and forward model | 进行中 | 60% | RPC parser and forward model implemented for theoretical image-point calculation | Implement shared inverse-model base for methods one and two |
-| P8 | LM fixed-height inversion | 未开始 | 0% | None | Implement method one and result TXT output |
-| P9 | LM two-image inversion | 未开始 | 0% | None | Implement joint solution, conditioning diagnostics, and result TXT output |
+| P7 | RPC parser and forward model | 已完成 | 100% | RPC parser, forward model, and exposed normalization offsets are implemented | Keep the model interface stable for later accuracy evaluation |
+| P8 | LM fixed-height inversion | 已完成 | 100% | Fixed-height LM inversion and result TXT output implemented; verified with the existing M175124932RE measurement | Generate final measurements for all images |
+| P9 | LM two-image inversion | 进行中 | 95% | Two-image joint LM solver, initial-value loading, condition-number diagnostics, and result TXT output implemented; a self-consistent two-view test converged, while inconsistent automatic candidate pairs correctly remain unresolved | Validate with final manually confirmed point pairs |
 | P10 | Accuracy evaluation module | 未开始 | 0% | None | Implement batch input, truth matching, statistics, and report output |
 | P11 | End-to-end integration | 未开始 | 0% | None | Connect all three command-line programs |
 | P12 | Tests and final verification | 已取消 | 100% | User requested no test files or test targets | Excluded from the project scope |

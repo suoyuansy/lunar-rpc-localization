@@ -13,6 +13,18 @@ public:
 
     PixelPoint forward(const GeoPoint& point) const;
 
+    double longitude_offset() const {
+        return long_off_;
+    }
+
+    double latitude_offset() const {
+        return lat_off_;
+    }
+
+    double height_offset() const {
+        return height_off_;
+    }
+
 private:
     std::array<double, 20> line_num_{};
     std::array<double, 20> line_den_{};
@@ -31,4 +43,3 @@ private:
 };
 
 }  // namespace rpc_localization
-

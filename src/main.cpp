@@ -1,4 +1,5 @@
 #include "point_measurement/point_measurement_app.hpp"
+#include "rfm/rfm_localization_app.hpp"
 
 #include <opencv2/core/utils/logger.hpp>
 
@@ -51,7 +52,13 @@ int main(int argc, char** argv) {
                 argv + 1);
         }
 
-        if (command == "localize" || command == "evaluate") {
+        if (command == "localize") {
+            return rpc_localization::run_rfm_localization_app(
+                argc - 1,
+                argv + 1);
+        }
+
+        if (command == "evaluate") {
             std::cerr << "错误: 子命令 " << command << " 尚未实现。\n";
             return 1;
         }
