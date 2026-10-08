@@ -236,7 +236,6 @@ build/vs2022-x64-release/bin/lunar_rpc_tool.exe
 `RPC_localization` 目录即可：
 
 ```bat
-:: 在 Visual Studio 2022 Developer Command Prompt 中执行
 cd /d <项目根目录>
 cmake --fresh --preset vs2022-x64-debug
 cmake --build --preset vs2022-x64-debug
@@ -244,7 +243,6 @@ cmake --build --preset vs2022-x64-debug
 
 ### 4.2 Release 构建
 
-同样在 **Visual Studio 2022 Developer Command Prompt** 中执行：
 
 ```bat
 cd /d <项目根目录>
@@ -255,7 +253,6 @@ cmake --build --preset vs2022-x64-release
 如果已经配置过，可以省略 `--fresh`：
 
 ```bat
-:: 仍然需要在 Visual Studio 2022 Developer Command Prompt 中执行
 cmake --preset vs2022-x64-debug
 cmake --build --preset vs2022-x64-debug
 ```
