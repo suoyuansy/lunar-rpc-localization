@@ -14,11 +14,12 @@
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <vector>
+#include <utility>
 
 namespace rpc_localization {
 namespace {
@@ -118,41 +119,19 @@ std::filesystem::path resolve_image_path(
     return candidate;
 }
 
-cv::Mat_<float> make_display_image(const cv::Mat_<float>& image) {
-    cv::Mat_<float> valid_values;
-    std::vector<float> samples;
-    samples.reserve(image.total());
+std::pair<double, double> finite_range(const cv::Mat_<float>& image) {
+    double minimum = std::numeric_limits<double>::infinity();
+    double maximum = -std::numeric_limits<double>::infinity();
     for (int row = 0; row < image.rows; ++row) {
         for (int column = 0; column < image.cols; ++column) {
             const float value = image(row, column);
             if (std::isfinite(value) && std::abs(value) < 1e30f) {
-                samples.push_back(value);
+                minimum = std::min(minimum, static_cast<double>(value));
+                maximum = std::max(maximum, static_cast<double>(value));
             }
         }
     }
-    if (samples.empty()) {
-        return cv::Mat_<float>(image.size(), 0.0f);
-    }
-
-    std::sort(samples.begin(), samples.end());
-    const std::size_t low_index =
-        static_cast<std::size_t>(0.02 * static_cast<double>(samples.size() - 1));
-    const std::size_t high_index =
-        static_cast<std::size_t>(0.98 * static_cast<double>(samples.size() - 1));
-    const float low = samples[low_index];
-    const float high = samples[high_index];
-    const float range = std::max(high - low, 1e-12f);
-
-    cv::Mat_<float> result(image.size());
-    for (int row = 0; row < image.rows; ++row) {
-        for (int column = 0; column < image.cols; ++column) {
-            const float value = image(row, column);
-            const float normalized =
-                std::isfinite(value) ? (value - low) / range : 0.0f;
-            result(row, column) = std::clamp(normalized, 0.0f, 1.0f);
-        }
-    }
-    return result;
+    return {minimum, maximum};
 }
 
 void on_mouse(int event, int x, int y, int, void* userdata) {
@@ -266,6 +245,10 @@ int run_point_measurement_app(int argc, char** argv) {
                    << ", low_confidence="
                    << (detection.low_confidence ? "true" : "false");
     std::cout << candidate_text.str() << std::endl;
+
+    const auto [minimum, maximum] = finite_range(roi);
+    std::cout << "ROI 原始值范围: min=" << minimum
+              << ", max=" << maximum << std::endl;
     if (options.auto_only) {
         return 0;
     }
@@ -276,10 +259,10 @@ int run_point_measurement_app(int argc, char** argv) {
     state.selected = detection.point;
     state.scale = 2.0;
 
-    cv::Mat_<float> display_float = make_display_image(state.image);
-    cv::Mat display_gray;
-    display_float.convertTo(display_gray, CV_8U, 255.0);
-    cv::cvtColor(display_gray, state.display_base, cv::COLOR_GRAY2BGR);
+    std::cout << "显示映射: 原始 CV_32F 单通道，由 OpenCV 窗口映射为 8 位。"
+              << std::endl;
+
+    state.display_base = state.image.clone();
     cv::resize(
         state.display_base,
         state.display_base,
@@ -306,12 +289,20 @@ int run_point_measurement_app(int argc, char** argv) {
 
         cv::Mat display = state.display_base.clone();
 
+        const cv::Point marker_position(
+            static_cast<int>(std::lround(state.selected.x * state.scale)),
+            static_cast<int>(std::lround(state.selected.y * state.scale)));
         cv::drawMarker(
             display,
-            cv::Point(
-                static_cast<int>(std::lround(state.selected.x * state.scale)),
-                static_cast<int>(std::lround(state.selected.y * state.scale))),
-            cv::Scalar(0, 0, 255),
+            marker_position,
+            cv::Scalar(0.0),
+            cv::MARKER_CROSS,
+            22,
+            4);
+        cv::drawMarker(
+            display,
+            marker_position,
+            cv::Scalar(1.0),
             cv::MARKER_CROSS,
             18,
             2);
@@ -320,13 +311,22 @@ int run_point_measurement_app(int argc, char** argv) {
         coordinate_text << std::fixed << std::setprecision(3)
                         << "sample=" << x0 + state.selected.x
                         << " line=" << y0 + state.selected.y;
+        const std::string coordinate = coordinate_text.str();
         cv::putText(
             display,
-            coordinate_text.str(),
+            coordinate,
+            cv::Point(11, 25),
+            cv::FONT_HERSHEY_SIMPLEX,
+            0.65,
+            cv::Scalar(0.0),
+            2);
+        cv::putText(
+            display,
+            coordinate,
             cv::Point(10, 24),
             cv::FONT_HERSHEY_SIMPLEX,
             0.65,
-            cv::Scalar(0, 255, 0),
+            cv::Scalar(1.0),
             2);
 
         const std::string help =
@@ -343,10 +343,18 @@ int run_point_measurement_app(int argc, char** argv) {
         cv::putText(
             display,
             help,
+            cv::Point(11, display.rows - 11),
+            cv::FONT_HERSHEY_SIMPLEX,
+            0.45 * help_scale,
+            cv::Scalar(0.0),
+            1);
+        cv::putText(
+            display,
+            help,
             cv::Point(10, display.rows - 12),
             cv::FONT_HERSHEY_SIMPLEX,
             0.45 * help_scale,
-            cv::Scalar(255, 255, 0),
+            cv::Scalar(1.0),
             1);
         cv::imshow(window_name, display);
 

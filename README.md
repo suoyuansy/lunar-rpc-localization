@@ -24,7 +24,7 @@ build\vs2022-x64-release\bin\lunar_rpc_tool.exe
 - Progress tracking: see `PROGRESS.md`.
 - Build scaffold: complete.
 - Unified CLI: one `lunar_rpc_tool` executable dispatches `measure`, `localize`, and `evaluate`.
-- Point measurement module: initial implementation complete; supports TIFF ROI reading, subpixel automatic candidate detection, 2x display, mouse/0.1-pixel arrow-key adjustment, `q` confirmation, automatic overwrite, and decimal TXT output.
+- Point measurement module: initial implementation complete; supports TIFF ROI reading, subpixel automatic candidate detection, raw `CV_32F` single-channel display, mouse/0.1-pixel arrow-key adjustment, `q` confirmation, automatic overwrite, and decimal TXT output.
 - RPC inverse and accuracy modules: not started.
 - Build output contains one project executable; module `.cpp` files are compiled directly and no `rpc_*.lib` files are emitted.
 
