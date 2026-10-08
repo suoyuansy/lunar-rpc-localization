@@ -419,10 +419,22 @@ int run_point_measurement_app(int argc, char** argv) {
     UiState state;
     state.image = roi;
     state.selected = detection.point;
-    state.scale = 2.0;
+    constexpr double target_display_side = 1000.0;
+    const double source_side =
+        static_cast<double>(std::max(roi_width, roi_height));
+    state.scale = std::clamp(
+        target_display_side / std::max(1.0, source_side),
+        0.5,
+        8.0);
 
     std::cout << "显示映射: ROI 有效值 [min, max] -> [0, 255]，单通道 8 位。"
               << std::endl;
+    std::cout << "显示缩放: " << std::fixed << std::setprecision(2)
+              << state.scale << "x，显示尺寸约 "
+              << static_cast<int>(std::lround(roi_width * state.scale))
+              << "x"
+              << static_cast<int>(std::lround(roi_height * state.scale))
+              << " pixel。" << std::endl;
 
     state.display_base =
         make_linear_display_image(state.image, minimum, maximum);
