@@ -12,8 +12,10 @@
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
+#include <iomanip>
 #include <iostream>
 #include <optional>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -35,7 +37,7 @@ struct Options {
 struct UiState {
     cv::Mat display_base;
     cv::Mat_<float> image;
-    cv::Point selected;
+    cv::Point2d selected;
     double scale = 1.0;
     bool confirmed = false;
     bool cancelled = false;
@@ -52,7 +54,7 @@ void print_help() {
         << "  --force               允许覆盖已有量测文件\n"
         << "  --auto-only           只打印自动候选，不打开窗口，不写结果\n"
         << "  --help                显示帮助\n\n"
-        << "交互: 鼠标左键粗调，方向键微调 1 pixel，q 确认，Esc 取消。\n";
+        << "交互: 鼠标左键粗调，方向键微调 0.1 pixel，q 确认，Esc 取消。\n";
 }
 
 Options parse_options(int argc, char** argv) {
@@ -162,10 +164,14 @@ void on_mouse(int event, int x, int y, int, void* userdata) {
         return;
     }
     auto* state = static_cast<UiState*>(userdata);
-    const int image_x = static_cast<int>(std::lround(x / state->scale));
-    const int image_y = static_cast<int>(std::lround(y / state->scale));
-    state->selected.x = std::clamp(image_x, 0, state->image.cols - 1);
-    state->selected.y = std::clamp(image_y, 0, state->image.rows - 1);
+    state->selected.x = std::clamp(
+        static_cast<double>(x) / state->scale,
+        0.0,
+        state->image.cols - 1.0);
+    state->selected.y = std::clamp(
+        static_cast<double>(y) / state->scale,
+        0.0,
+        state->image.rows - 1.0);
 }
 
 bool is_left_key(int key) {
@@ -254,13 +260,16 @@ int run_point_measurement_app(int argc, char** argv) {
     const DetectionResult detection =
         detect_single_candidate(roi, expected_local);
 
-    const int candidate_global_sample = x0 + detection.point.x;
-    const int candidate_global_line = y0 + detection.point.y;
-    std::cout << "自动候选: sample=" << candidate_global_sample
-              << ", line=" << candidate_global_line
-              << ", score=" << detection.score
-              << ", low_confidence=" << (detection.low_confidence ? "true" : "false")
-              << '\n';
+    const double candidate_global_sample = x0 + detection.point.x;
+    const double candidate_global_line = y0 + detection.point.y;
+    std::ostringstream candidate_text;
+    candidate_text << std::fixed << std::setprecision(3)
+                   << "自动候选: sample=" << candidate_global_sample
+                   << ", line=" << candidate_global_line
+                   << ", score=" << detection.score
+                   << ", low_confidence="
+                   << (detection.low_confidence ? "true" : "false");
+    std::cout << candidate_text.str() << std::endl;
     if (options.auto_only) {
         return 0;
     }
@@ -269,18 +278,29 @@ int run_point_measurement_app(int argc, char** argv) {
     UiState state;
     state.image = roi;
     state.selected = detection.point;
-    state.scale = 1.0;
+    state.scale = 2.0;
 
     cv::Mat_<float> display_float = make_display_image(state.image);
     cv::Mat display_gray;
     display_float.convertTo(display_gray, CV_8U, 255.0);
     cv::cvtColor(display_gray, state.display_base, cv::COLOR_GRAY2BGR);
+    cv::resize(
+        state.display_base,
+        state.display_base,
+        cv::Size(),
+        state.scale,
+        state.scale,
+        cv::INTER_NEAREST);
 
     cv::namedWindow(window_name, cv::WINDOW_AUTOSIZE);
     cv::setMouseCallback(window_name, on_mouse, &state);
 
-    std::cout << "操作提示: 鼠标左键点击粗调，方向键微调 1 pixel，"
-                 "q 确认，Esc 取消。\n";
+    std::cout << "操作提示:\n"
+                 "  鼠标左键: 将判读点移动到点击位置\n"
+                 "  方向键: 按 0.1 pixel 微调\n"
+                 "  q: 确认并保存量测结果\n"
+                 "  Esc 或关闭窗口: 取消量测"
+              << std::endl;
 
     while (true) {
         if (cv::getWindowProperty(window_name, cv::WND_PROP_VISIBLE) < 1.0) {
@@ -300,12 +320,13 @@ int run_point_measurement_app(int argc, char** argv) {
             18,
             2);
 
-        const int global_sample = x0 + state.selected.x;
-        const int global_line = y0 + state.selected.y;
+        std::ostringstream coordinate_text;
+        coordinate_text << std::fixed << std::setprecision(3)
+                        << "sample=" << x0 + state.selected.x
+                        << " line=" << y0 + state.selected.y;
         cv::putText(
             display,
-            "sample=" + std::to_string(global_sample) +
-                " line=" + std::to_string(global_line),
+            coordinate_text.str(),
             cv::Point(10, 24),
             cv::FONT_HERSHEY_SIMPLEX,
             0.65,
@@ -313,7 +334,7 @@ int run_point_measurement_app(int argc, char** argv) {
             2);
 
         const std::string help =
-            "L-click: move  Arrows: 1 px  q: confirm  Esc: cancel";
+            "L-click: move  Arrows: 0.1 px  q: confirm  Esc: cancel";
         int baseline = 0;
         const auto help_size = cv::getTextSize(
             help,
@@ -343,13 +364,15 @@ int run_point_measurement_app(int argc, char** argv) {
             break;
         }
         if (is_left_key(key)) {
-            state.selected.x = std::max(0, state.selected.x - 1);
+            state.selected.x = std::max(0.0, state.selected.x - 0.1);
         } else if (is_right_key(key)) {
-            state.selected.x = std::min(state.image.cols - 1, state.selected.x + 1);
+            state.selected.x =
+                std::min(state.image.cols - 1.0, state.selected.x + 0.1);
         } else if (is_up_key(key)) {
-            state.selected.y = std::max(0, state.selected.y - 1);
+            state.selected.y = std::max(0.0, state.selected.y - 0.1);
         } else if (is_down_key(key)) {
-            state.selected.y = std::min(state.image.rows - 1, state.selected.y + 1);
+            state.selected.y =
+                std::min(state.image.rows - 1.0, state.selected.y + 0.1);
         }
     }
 

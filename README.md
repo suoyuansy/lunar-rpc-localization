@@ -9,7 +9,7 @@ The project supports point measurement, fixed-height LM inversion, two-image LM 
 - Technical plan: complete, see `TECHNICAL_PLAN.md`.
 - Progress tracking: see `PROGRESS.md`.
 - Build scaffold: complete.
-- Point measurement module: initial implementation complete; supports TIFF ROI reading, automatic candidate detection, mouse/arrow-key adjustment, `q` confirmation, and TXT output.
+- Point measurement module: initial implementation complete; supports TIFF ROI reading, subpixel automatic candidate detection, 2x display, mouse/0.1-pixel arrow-key adjustment, `q` confirmation, and decimal TXT output.
 - RPC inverse and accuracy modules: not started.
 
 ## Planned Modules

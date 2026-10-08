@@ -81,6 +81,19 @@ int scale_hits(
     return hits;
 }
 
+double parabolic_offset(double left, double center, double right) {
+    const double denominator = left - 2.0 * center + right;
+    if (!std::isfinite(denominator) || std::abs(denominator) < 1e-12) {
+        return 0.0;
+    }
+
+    const double offset = 0.5 * (left - right) / denominator;
+    if (!std::isfinite(offset)) {
+        return 0.0;
+    }
+    return std::clamp(offset, -0.5, 0.5);
+}
+
 }  // namespace
 
 DetectionResult detect_single_candidate(
@@ -102,9 +115,7 @@ DetectionResult detect_single_candidate(
         }
     }
     if (finite_values.empty()) {
-        return DetectionResult{cv::Point(
-                                   static_cast<int>(std::lround(expected_center.x)),
-                                   static_cast<int>(std::lround(expected_center.y))),
+        return DetectionResult{cv::Point2d(expected_center),
                                0.0,
                                true};
     }
@@ -147,9 +158,7 @@ DetectionResult detect_single_candidate(
 
     const int border = 4;
     double best_score = -std::numeric_limits<double>::infinity();
-    cv::Point best_point(
-        static_cast<int>(std::lround(expected_center.x)),
-        static_cast<int>(std::lround(expected_center.y)));
+    cv::Point2d best_point(expected_center);
 
     for (int row = border; row < combined.rows - border; ++row) {
         for (int column = border; column < combined.cols - border; ++column) {
@@ -172,13 +181,27 @@ DetectionResult detect_single_candidate(
 
             if (total > best_score) {
                 best_score = total;
-                best_point = cv::Point(column, row);
+                best_point = cv::Point2d(column, row);
             }
         }
     }
 
     if (!std::isfinite(best_score)) {
         return DetectionResult{best_point, 0.0, true};
+    }
+
+    const int best_x = static_cast<int>(std::lround(best_point.x));
+    const int best_y = static_cast<int>(std::lround(best_point.y));
+    if (best_x > 0 && best_x + 1 < combined.cols &&
+        best_y > 0 && best_y + 1 < combined.rows) {
+        best_point.x += parabolic_offset(
+            combined(best_y, best_x - 1),
+            combined(best_y, best_x),
+            combined(best_y, best_x + 1));
+        best_point.y += parabolic_offset(
+            combined(best_y - 1, best_x),
+            combined(best_y, best_x),
+            combined(best_y + 1, best_x));
     }
 
     return DetectionResult{best_point, best_score, best_score < 0.35};

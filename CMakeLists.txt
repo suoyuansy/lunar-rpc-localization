@@ -115,5 +115,10 @@ target_link_libraries(
 add_executable(point_measure_tool
     src/point_measurement/main.cpp
 )
+set_target_properties(
+    point_measure_tool
+    PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/src"
+)
 target_link_libraries(point_measure_tool PRIVATE rpc_measurement)
 rpc_copy_third_party_runtime(point_measure_tool)

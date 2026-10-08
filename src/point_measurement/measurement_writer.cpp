@@ -5,6 +5,7 @@
 
 #include <cmath>
 #include <fstream>
+#include <iomanip>
 #include <stdexcept>
 
 namespace rpc_localization {
@@ -19,10 +20,9 @@ void write_measurement_txt(
         throw std::runtime_error("无法写量测文件: " + path.u8string());
     }
 
-    output << "sample=" << static_cast<long long>(std::llround(point.sample))
-           << '\n';
-    output << "line=" << static_cast<long long>(std::llround(point.line))
-           << '\n';
+    output << std::fixed << std::setprecision(3)
+           << "sample=" << point.sample << '\n';
+    output << "line=" << point.line << '\n';
 }
 
 }  // namespace rpc_localization
