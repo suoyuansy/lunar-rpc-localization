@@ -454,9 +454,9 @@ int run_point_measurement_app(int argc, char** argv) {
     std::cout << "ROI 原始值范围: min=" << minimum
               << ", max=" << maximum << std::endl;
     const auto [display_low, display_high] =
-        percentile_range(roi, 0.02, 0.98);
-    std::cout << "显示拉伸范围: 2%=" << display_low
-              << ", 98%=" << display_high << std::endl;
+        percentile_range(roi, 0.01, 0.99);
+    std::cout << "显示拉伸范围: 1%=" << display_low
+              << ", 99%=" << display_high << std::endl;
     if (options.auto_only) {
         return 0;
     }
