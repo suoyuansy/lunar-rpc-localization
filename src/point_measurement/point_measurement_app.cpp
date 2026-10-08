@@ -324,7 +324,7 @@ int run_point_measurement_app(int argc, char** argv) {
             }
         }
         std::cout << "\n批量量测完成，共处理 " << files.size()
-                  << " 景影像。" << std::endl;
+                  << " 张影像。" << std::endl;
         return 0;
     }
 
