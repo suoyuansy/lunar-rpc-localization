@@ -32,20 +32,20 @@ The project supports point measurement, fixed-height LM inversion, two-image LM 
 - Visual Studio CMake and Ninja
 - OpenCV
 - libtiff
-- vcpkg manifest mode for third-party dependency installation
-- Visual Studio bundled vcpkg is preferred on Windows
+- Local prebuilt third-party dependencies under `third_party/`
 
 Detailed build instructions are in `docs/BUILDING.md`.
 
 ## Data Policy
 
-Large TIFF files and downloaded third-party libraries are not committed.
+Large TIFF files and local third-party libraries are not committed.
 
 - TIFF images are stored under `data/images/` and ignored by Git.
 - RPC files are stored under `data/rpc/`.
 - Truth coordinates are stored under `data/truth/`.
 - Generated results belong under `output/`.
-- Downloaded vcpkg content belongs under `third_party/vcpkg/` and is ignored by Git.
+- Local OpenCV binaries belong under `third_party/opencv/` and are ignored by Git.
+- Local libtiff binaries belong under `third_party/libtiff/` and are ignored by Git.
 
 ## Repository Layout
 
@@ -53,7 +53,7 @@ Large TIFF files and downloaded third-party libraries are not committed.
 - `data/`: local input data with separate subdirectories.
 - `include/`: public headers grouped by module.
 - `src/`: source files grouped by module.
-- `third_party/`: dependency manifests and bootstrap support.
+- `third_party/`: local OpenCV and libtiff dependencies.
 - `scripts/`: dependency setup and helper scripts.
 - `tests/`: module and integration tests.
 - `output/`: generated measurement, RFM, accuracy, and log files.

@@ -19,13 +19,9 @@
 *.vcxproj.filters
 *.vcxproj.user
 
-# Downloaded third-party dependencies
-/third_party/vcpkg/
-/third_party/vcpkg_installed/
-/third_party/downloads/
-/third_party/buildtrees/
-/third_party/packages/
-/third_party/vcpkg-cache/
+# 本地第三方二进制依赖，不提交到 Git
+/third_party/opencv/
+/third_party/libtiff/
 
 # Program outputs and temporary files
 /output/*
@@ -45,4 +41,3 @@
 Thumbs.db
 desktop.ini
 .DS_Store
-

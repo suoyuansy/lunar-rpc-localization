@@ -1,6 +1,6 @@
 # RPC 直接定位技术方案
 
-> **版本：** v0.22（草案）
+> **版本：** v0.23（草案）
 > **状态：** 待讨论，暂不实施代码
 > **更新日期：** 2026-10-08
 
@@ -10,7 +10,7 @@
 - 项目构建：CMake。
 - 默认 Windows 构建环境：Visual Studio 2022 Developer Command Prompt。
 - 默认 Windows 编译器：MSVC。
-- 默认使用 Visual Studio 自带的 CMake、Ninja 和 vcpkg。
+- 默认使用 Visual Studio 自带的 CMake 和 Ninja。
 - 不使用 MSYS2 UCRT64 作为主构建方案。
 - 图像处理、矩阵运算和交互显示：OpenCV。
 - TIFF 局部窗口读取：libtiff。
@@ -57,7 +57,7 @@
 - `data/truth/`：默认真值目录。
 - `include/`：公共头文件。
 - `src/`：模块源文件和程序入口。
-- `third_party/`：第三方依赖配置和自动下载内容。
+- `third_party/`：本地 OpenCV 和 libtiff 依赖。
 - `scripts/`：依赖安装和辅助脚本。
 - `tests/`：模块测试。
 - `output/`：所有程序输出。
@@ -672,65 +672,27 @@ RMSE_h=\sqrt{\frac{1}{N}\sum D_{horizontal,i}^2}
 - 项目根目录的判定依据是同时存在 `CMakeLists.txt` 和 `config/rpc_project.ini`。
 - 找到项目根目录后，再解析 `data/`、`output/` 和 `config/` 相对路径。
 
-### 9.3 第三方库自动下载
+### 9.3 本地第三方依赖
 
-推荐使用 vcpkg manifest 模式管理 OpenCV 和 libtiff。
+项目不再自动下载 OpenCV 和 libtiff。
 
-可以把它理解成 C++ 项目中的“Conda 式依赖管理”，但 vcpkg 按编译器、系统架构和构建类型管理 C++ 依赖。
+- `third_party/opencv/`：OpenCV 4.12.0 Windows x64 MSVC 预编译包。
+- `third_party/opencv/include/`：OpenCV 头文件。
+- `third_party/opencv/lib/`：OpenCV Debug 和 Release 导入库。
+- `third_party/opencv/bin/`：OpenCV Debug 和 Release DLL。
+- `third_party/libtiff/x64-windows/`：libtiff 4.7.2 x64 MSVC 安装结果。
+- `third_party/libtiff/x64-windows/include/`：libtiff 头文件。
+- `third_party/libtiff/x64-windows/lib/` 和 `debug/lib/`：libtiff 导入库。
+- `third_party/libtiff/x64-windows/bin/` 和 `debug/bin/`：libtiff DLL。
 
-当前机器优先使用 Visual Studio 2022 自带的 vcpkg，通过 `%VSINSTALLDIR%VC\vcpkg` 定位，不在项目文件中写死绝对路径。
+`third_party/CMakeLists.txt` 直接定义两个导入目标：
 
-Manifest 模式指项目根目录或指定目录中存在 `vcpkg.json`，其中声明项目直接依赖的库。它与全局安装模式不同，依赖属于当前项目，并按 baseline 固定版本。
+- `opencv_local`。
+- `tiff_local`。
 
-Manifest 模式的优点：
+业务模块统一链接 `third_party_deps`，不再执行 `find_package()`，不再调用 vcpkg，也不下载第三方源码。
 
-- 每个项目独立记录第三方依赖。
-- 依赖版本可以通过 baseline 固定。
-- CMake 配置时自动检查依赖。
-- 缺少 OpenCV 或 libtiff 时自动下载和编译。
-- 不要求用户手动复制第三方库。
-
-- `third_party/vcpkg.json` 保存依赖清单、版本和 vcpkg baseline。
-- 依赖包括 `opencv4` 和 `tiff`。
-- `third_party/CMakeLists.txt` 只负责发现依赖并创建统一的接口目标。
-- `third_party/vcpkg/` 保存自动下载的 vcpkg 工具。
-- `third_party/vcpkg_installed/` 保存已安装依赖。
-- `build/`、`third_party/vcpkg/` 和 `third_party/vcpkg_installed/` 加入 `.gitignore`。
-- CMake 配置时将 `VCPKG_MANIFEST_DIR` 指向 `third_party/`，保证 vcpkg manifest 仍由项目统一管理。
-
-自动初始化方式：
-
-1. 在 Visual Studio 2022 Developer Command Prompt 中优先查找 `%VSINSTALLDIR%VC\vcpkg\vcpkg.exe`。
-2. 如果 Visual Studio 没有可用 vcpkg，再由 `scripts/bootstrap_deps.ps1` 从 GitHub 下载。
-3. CMake 配置时读取 `third_party/vcpkg.json`，自动下载并安装 OpenCV 和 libtiff。
-4. 使用 `VCPKG_INSTALLED_DIR` 将安装结果放到 `third_party/vcpkg_installed/`。
-5. 不要求用户手动复制任何 `.lib`、`.dll` 或头文件。
-
-不把 vcpkg 下载内容提交到版本库；提交 `vcpkg.json`、baseline 和初始化脚本即可。
-
-首次下载和编译 OpenCV 可能需要较长时间，并依赖网络和二进制缓存，但后续可复用 vcpkg 缓存。
-
-如果网络不可用，允许使用已经配置好的 Visual Studio vcpkg 或系统依赖，但程序必须给出明确缺少依赖的错误。
-
-推荐提交的依赖相关文件：
-
-- `third_party/vcpkg.json`。
-- `third_party/vcpkg-configuration.json`。
-- `scripts/bootstrap_deps.ps1`。
-- `CMakePresets.json`。
-
-使用 FetchContent 也可以自动下载源码，但不推荐用于 OpenCV。OpenCV 体积大、编译时间长、依赖较多，使用 vcpkg 更容易管理。项目只保留 vcpkg manifest 和初始化脚本，不把第三方源码复制进业务模块。
-
-vcpkg 不依赖 Visual Studio IDE，IDE 只是调用 CMake 的前端。真正决定依赖是否兼容的是编译器和目标平台。
-
-- 当前项目优先在 Visual Studio 2022 Developer Command Prompt 中构建。
-- VS Code、CLion、Qt Creator 仍可使用 CMake Presets，但 Windows 默认继续采用 MSVC triplet。
-- 在 Windows 上使用 `x64-windows` 时采用 MSVC。
-- 如果使用 MinGW，可以选择 `x64-mingw-dynamic` 或对应 triplet，并改用 GCC/MinGW 编译器。
-- 如果使用 Linux，可以选择 `x64-linux`。
-- 如果切换到不同编译器或不同架构，vcpkg 需要按新 triplet 重新安装依赖，这是 C++ ABI 的正常要求。
-- 如果只更换 IDE，但仍使用同一编译器和同一个 triplet，则不需要重新下载依赖。
-- 不同 triplet 使用不同的构建目录和安装目录，避免混用二进制库。
+这些二进制目录体积较大，保存在本地但不提交 Git。
 
 ### 9.4 CMake Presets
 
@@ -743,7 +705,7 @@ vcpkg 不依赖 Visual Studio IDE，IDE 只是调用 CMake 的前端。真正决
 - `macos-clang-debug`。
 - `macos-clang-release`。
 
-Visual Studio 2022 的预设优先使用 `%VSINSTALLDIR%Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe`、VS 自带 Ninja 和 `%VSINSTALLDIR%VC\vcpkg`。
+Visual Studio 2022 的预设优先使用 `%VSINSTALLDIR%Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe` 和 VS 自带 Ninja。CMake 直接读取项目内的本地依赖，不执行依赖下载。
 
 预设与 IDE 的配合：
 
@@ -774,8 +736,8 @@ Visual Studio 2022 的预设优先使用 `%VSINSTALLDIR%Common7\IDE\CommonExtens
 ### 9.7 构建流程
 
 1. 打开 Visual Studio 2022 Developer Command Prompt。
-2. 确认 MSVC、VS 自带 CMake、VS 自带 Ninja 和 VS 自带 vcpkg 可用。
-3. 使用 VS vcpkg 或初始化脚本准备 OpenCV 和 libtiff。
+2. 确认 MSVC、VS 自带 CMake 和 VS 自带 Ninja 可用。
+3. 确认本地 OpenCV 和 libtiff 已位于 `third_party/`。
 4. 使用 CMake Preset 配置项目。
 5. 使用 CMake 构建三个可执行程序。
 6. 使用 CTest 运行模块测试。
@@ -783,12 +745,12 @@ Visual Studio 2022 的预设优先使用 `%VSINSTALLDIR%Common7\IDE\CommonExtens
 
 首次构建示例流程：
 
-1. 执行 `scripts/bootstrap_deps.ps1`，或在 VS 环境直接使用自带 vcpkg。
+1. 打开 Visual Studio 2022 Developer Command Prompt。
 2. 执行 `cmake --preset vs2022-x64-release`。
 3. 执行 `cmake --build --preset vs2022-x64-release`。
 4. 执行 `ctest --preset vs2022-x64-release`。
 
-用户拿到项目后，只需要安装 Git、CMake 和 C++ 编译环境。OpenCV、libtiff 和 vcpkg 由脚本及 CMake 自动准备到本地 `third_party/` 或构建目录，不需要手动移植第三方库。
+用户拿到项目后，需要确保本地 `third_party/opencv` 和 `third_party/libtiff` 存在。CMake 不再下载或编译第三方库。
 
 ## 10. 修订记录
 
@@ -816,3 +778,4 @@ Visual Studio 2022 的预设优先使用 `%VSINSTALLDIR%Common7\IDE\CommonExtens
 | v0.20 | 2026-10-08 | 细化 vcpkg 自动下载、CMake 联动和首次构建流程 |
 | v0.21 | 2026-10-08 | 说明 manifest 模式与 IDE 无关，补充编译器 triplet 和 IDE 适配规则 |
 | v0.22 | 2026-10-08 | 优先使用 VS2022 Developer Command Prompt、VS CMake/Ninja/vcpkg，并更新数据目录 |
+| v0.23 | 2026-10-08 | 移除自动下载方案，改用本地 OpenCV 和 libtiff 依赖 |

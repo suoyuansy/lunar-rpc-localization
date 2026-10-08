@@ -11,13 +11,9 @@
       "displayName": "Visual Studio 2022 x64 Debug",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/vs2022-x64-debug",
-      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "VCPKG_TARGET_TRIPLET": "x64-windows",
-        "VCPKG_HOST_TRIPLET": "x64-windows",
-        "VCPKG_MANIFEST_DIR": "${sourceDir}/third_party",
-        "VCPKG_INSTALLED_DIR": "${sourceDir}/third_party/vcpkg_installed"
+        "CMAKE_CXX_COMPILER": "cl.exe"
       }
     },
     {
