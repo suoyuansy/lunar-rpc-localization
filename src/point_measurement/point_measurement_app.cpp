@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
@@ -132,6 +133,32 @@ std::pair<double, double> finite_range(const cv::Mat_<float>& image) {
         }
     }
     return {minimum, maximum};
+}
+
+cv::Mat make_linear_display_image(
+    const cv::Mat_<float>& image,
+    double minimum,
+    double maximum) {
+    cv::Mat display(image.size(), CV_8U, cv::Scalar(0));
+    if (!std::isfinite(minimum) || !std::isfinite(maximum) ||
+        maximum <= minimum) {
+        return display;
+    }
+
+    const double range = maximum - minimum;
+    for (int row = 0; row < image.rows; ++row) {
+        for (int column = 0; column < image.cols; ++column) {
+            const float value = image(row, column);
+            if (!std::isfinite(value) || std::abs(value) >= 1e30f) {
+                continue;
+            }
+
+            const double normalized = (value - minimum) / range;
+            display.at<std::uint8_t>(row, column) =
+                cv::saturate_cast<std::uint8_t>(normalized * 255.0);
+        }
+    }
+    return display;
 }
 
 void on_mouse(int event, int x, int y, int, void* userdata) {
@@ -259,10 +286,11 @@ int run_point_measurement_app(int argc, char** argv) {
     state.selected = detection.point;
     state.scale = 2.0;
 
-    std::cout << "显示映射: 原始 CV_32F 单通道，由 OpenCV 窗口映射为 8 位。"
+    std::cout << "显示映射: ROI 有效值 [min, max] -> [0, 255]，单通道 8 位。"
               << std::endl;
 
-    state.display_base = state.image.clone();
+    state.display_base =
+        make_linear_display_image(state.image, minimum, maximum);
     cv::resize(
         state.display_base,
         state.display_base,
@@ -295,14 +323,14 @@ int run_point_measurement_app(int argc, char** argv) {
         cv::drawMarker(
             display,
             marker_position,
-            cv::Scalar(0.0),
+            cv::Scalar(0),
             cv::MARKER_CROSS,
             22,
             4);
         cv::drawMarker(
             display,
             marker_position,
-            cv::Scalar(1.0),
+            cv::Scalar(255),
             cv::MARKER_CROSS,
             18,
             2);
@@ -318,7 +346,7 @@ int run_point_measurement_app(int argc, char** argv) {
             cv::Point(11, 25),
             cv::FONT_HERSHEY_SIMPLEX,
             0.65,
-            cv::Scalar(0.0),
+            cv::Scalar(0),
             2);
         cv::putText(
             display,
@@ -326,7 +354,7 @@ int run_point_measurement_app(int argc, char** argv) {
             cv::Point(10, 24),
             cv::FONT_HERSHEY_SIMPLEX,
             0.65,
-            cv::Scalar(1.0),
+            cv::Scalar(255),
             2);
 
         const std::string help =
@@ -346,7 +374,7 @@ int run_point_measurement_app(int argc, char** argv) {
             cv::Point(11, display.rows - 11),
             cv::FONT_HERSHEY_SIMPLEX,
             0.45 * help_scale,
-            cv::Scalar(0.0),
+            cv::Scalar(0),
             1);
         cv::putText(
             display,
@@ -354,7 +382,7 @@ int run_point_measurement_app(int argc, char** argv) {
             cv::Point(10, display.rows - 12),
             cv::FONT_HERSHEY_SIMPLEX,
             0.45 * help_scale,
-            cv::Scalar(1.0),
+            cv::Scalar(255),
             1);
         cv::imshow(window_name, display);
 
