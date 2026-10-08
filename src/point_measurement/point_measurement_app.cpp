@@ -325,15 +325,15 @@ int run_point_measurement_app(int argc, char** argv) {
             marker_position,
             cv::Scalar(0),
             cv::MARKER_CROSS,
-            22,
-            4);
+            14,
+            2);
         cv::drawMarker(
             display,
             marker_position,
             cv::Scalar(255),
             cv::MARKER_CROSS,
-            18,
-            2);
+            10,
+            1);
 
         std::ostringstream coordinate_text;
         coordinate_text << std::fixed << std::setprecision(3)
