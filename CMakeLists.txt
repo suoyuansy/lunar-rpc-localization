@@ -101,6 +101,7 @@ endfunction()
 add_executable(lunar_rpc_tool
     src/main.cpp
     src/common/config.cpp
+    src/accuracy/accuracy_app.cpp
     src/rfm/rfm_localization_app.cpp
     src/rfm/rpc_model.cpp
     src/rfm/rfm_solver.cpp

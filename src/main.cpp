@@ -1,4 +1,5 @@
 #include "point_measurement/point_measurement_app.hpp"
+#include "accuracy/accuracy_app.hpp"
 #include "rfm/rfm_localization_app.hpp"
 
 #include <opencv2/core/utils/logger.hpp>
@@ -18,8 +19,8 @@ void print_help() {
         << "用法: lunar_rpc_tool <命令> [选项]\n\n"
         << "命令:\n"
         << "  measure     LRRR 像点坐标量测\n"
-        << "  localize    RFM 经纬度高程反算（待实现）\n"
-        << "  evaluate    定位精度评定（待实现）\n\n"
+        << "  localize    RFM 经纬度高程反算\n"
+        << "  evaluate    定位精度评定\n\n"
         << "示例:\n"
         << "  lunar_rpc_tool measure --image-name M175124932RE\n"
         << "  lunar_rpc_tool measure --help\n";
@@ -59,8 +60,9 @@ int main(int argc, char** argv) {
         }
 
         if (command == "evaluate") {
-            std::cerr << "错误: 子命令 " << command << " 尚未实现。\n";
-            return 1;
+            return rpc_localization::run_accuracy_evaluation_app(
+                argc - 1,
+                argv + 1);
         }
 
         std::cerr << "错误: 未知子命令: " << command << "\n\n";

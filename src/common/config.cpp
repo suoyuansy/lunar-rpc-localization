@@ -79,6 +79,7 @@ ProjectConfig load_project_config(const std::filesystem::path& config_path) {
     config.measurement_dir = root / "output" / "measurements";
     config.fixed_height_dir = root / "output" / "rfm" / "fixed_height";
     config.two_image_dir = root / "output" / "rfm" / "two_image";
+    config.accuracy_dir = root / "output" / "accuracy";
     config.target_table = root / "config" / "targets.csv";
     config.truth_file = root / "data" / "truth" / L"真值坐标.txt";
 
@@ -113,6 +114,8 @@ ProjectConfig load_project_config(const std::filesystem::path& config_path) {
             config.fixed_height_dir = resolve_against_root(root, value);
         } else if (key == "rfm_two_image_dir") {
             config.two_image_dir = resolve_against_root(root, value);
+        } else if (key == "accuracy_dir") {
+            config.accuracy_dir = resolve_against_root(root, value);
         } else if (key == "target_table") {
             config.target_table = resolve_against_root(root, value);
         } else if (key == "truth_file") {

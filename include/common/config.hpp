@@ -16,6 +16,7 @@ struct ProjectConfig {
     std::filesystem::path measurement_dir;
     std::filesystem::path fixed_height_dir;
     std::filesystem::path two_image_dir;
+    std::filesystem::path accuracy_dir;
     std::filesystem::path target_table;
     std::filesystem::path truth_file;
     double roi_size_m = 500.0;
