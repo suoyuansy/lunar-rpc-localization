@@ -111,14 +111,14 @@ target_link_libraries(
         third_party_deps
 )
 
-# 像点量测命令行程序。
-add_executable(point_measure_tool
-    src/point_measurement/main.cpp
+# 统一命令行程序，通过子命令选择具体功能。
+add_executable(lunar_rpc_tool
+    src/main.cpp
 )
 set_target_properties(
-    point_measure_tool
+    lunar_rpc_tool
     PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/src"
 )
-target_link_libraries(point_measure_tool PRIVATE rpc_measurement)
-rpc_copy_third_party_runtime(point_measure_tool)
+target_link_libraries(lunar_rpc_tool PRIVATE rpc_measurement)
+rpc_copy_third_party_runtime(lunar_rpc_tool)

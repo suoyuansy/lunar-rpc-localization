@@ -29,7 +29,6 @@ struct Options {
     std::string image_name;
     std::filesystem::path image_dir;
     std::filesystem::path output_dir;
-    bool force = false;
     bool auto_only = false;
     bool show_help = false;
 };
@@ -45,13 +44,12 @@ struct UiState {
 
 void print_help() {
     std::cout
-        << "用法: point_measure_tool [选项]\n"
+        << "用法: lunar_rpc_tool measure [选项]\n"
         << "  --config <文件>       指定 rpc_project.ini\n"
         << "  --image <文件>        直接指定原始 TIFF\n"
         << "  --image-name <名称>   用配置目录查找 TIFF\n"
         << "  --image-dir <目录>    覆盖影像目录\n"
         << "  --output-dir <目录>   覆盖量测输出目录\n"
-        << "  --force               允许覆盖已有量测文件\n"
         << "  --auto-only           只打印自动候选，不打开窗口，不写结果\n"
         << "  --help                显示帮助\n\n"
         << "交互: 鼠标左键粗调，方向键微调 0.1 pixel，q 确认，Esc 取消。\n";
@@ -78,8 +76,6 @@ Options parse_options(int argc, char** argv) {
             options.image_dir = next();
         } else if (argument == "--output-dir") {
             options.output_dir = next();
-        } else if (argument == "--force") {
-            options.force = true;
         } else if (argument == "--auto-only") {
             options.auto_only = true;
         } else if (argument == "--help" || argument == "-h") {
@@ -392,17 +388,16 @@ int run_point_measurement_app(int argc, char** argv) {
                                 : options.output_dir;
     const auto output_path =
         output_dir / (image_stem + "_point_measurement.txt");
-    if (std::filesystem::exists(output_path) && !options.force) {
-        throw std::runtime_error(
-            "量测文件已存在，未指定 --force: " + output_path.u8string());
-    }
+    const bool output_existed = std::filesystem::exists(output_path);
 
     write_measurement_txt(
         output_path,
         PixelPoint{
             static_cast<double>(x0 + state.selected.x),
             static_cast<double>(y0 + state.selected.y)});
-    std::cout << "量测结果已保存: " << output_path.u8string() << '\n';
+    std::cout << (output_existed ? "量测结果已保存（已覆盖原文件）: "
+                                 : "量测结果已保存: ")
+              << output_path.u8string() << '\n';
     return 0;
 }
 

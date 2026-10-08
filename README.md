@@ -4,12 +4,21 @@ C++/CMake/OpenCV implementation of RPC direct localization for LRRRs in LROC NAC
 
 The project supports point measurement, fixed-height LM inversion, two-image LM inversion, and batch accuracy evaluation.
 
+All functions use one executable:
+
+```bat
+lunar_rpc_tool measure --image-name M175124932RE
+lunar_rpc_tool localize --method fixed_height --image-name M175124932RE
+lunar_rpc_tool evaluate
+```
+
 ## Current Status
 
 - Technical plan: complete, see `TECHNICAL_PLAN.md`.
 - Progress tracking: see `PROGRESS.md`.
 - Build scaffold: complete.
-- Point measurement module: initial implementation complete; supports TIFF ROI reading, subpixel automatic candidate detection, 2x display, mouse/0.1-pixel arrow-key adjustment, `q` confirmation, and decimal TXT output.
+- Unified CLI: one `lunar_rpc_tool` executable dispatches `measure`, `localize`, and `evaluate`.
+- Point measurement module: initial implementation complete; supports TIFF ROI reading, subpixel automatic candidate detection, 2x display, mouse/0.1-pixel arrow-key adjustment, `q` confirmation, automatic overwrite, and decimal TXT output.
 - RPC inverse and accuracy modules: not started.
 
 ## Planned Modules

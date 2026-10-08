@@ -1,6 +1,6 @@
 # RPC 直接定位技术方案
 
-> **版本：** v0.25（草案）
+> **版本：** v0.26（草案）
 > **状态：** 核心模块实施中
 > **更新日期：** 2026-10-08
 
@@ -43,10 +43,10 @@
 1. `rpc_project.ini` 提供目录和默认参数。
 2. `targets.csv` 提供影像、目标、真值标识和分辨率映射。
 3. `真值坐标.txt` 提供月面真值。
-4. `point_measure_tool` 输出量测 TXT。
-5. `rfm_localize_tool --method fixed_height` 输出方案一结果。
-6. `rfm_localize_tool --method two_image` 读取两景方案一结果作为初值，输出来源方案二结果。
-7. `accuracy_eval_tool` 批量读取方案一和方案二结果，输出精度报告。
+4. `lunar_rpc_tool measure` 输出量测 TXT。
+5. `lunar_rpc_tool localize --method fixed_height` 输出方案一结果。
+6. `lunar_rpc_tool localize --method two_image` 读取两景方案一结果作为初值，输出来源方案二结果。
+7. `lunar_rpc_tool evaluate` 批量读取方案一和方案二结果，输出精度报告。
 
 ## 3. 项目目录与文件约定
 
@@ -201,7 +201,9 @@ pixel，若始终限制为整数像点，会引入约半像素量级的量化误
 
 ### 5.4 命令行接口
 
-程序名：`point_measure_tool`
+程序名：`lunar_rpc_tool`
+
+子命令：`measure`
 
 参数：
 
@@ -210,7 +212,6 @@ pixel，若始终限制为整数像点，会引入约半像素量级的量化误
 - `--image-name`：可选，只指定影像名称。
 - `--image-dir`：可选，覆盖影像目录。
 - `--output-dir`：可选，覆盖量测输出目录。
-- `--force`：可选，允许覆盖已有量测结果。
 
 默认和错误规则：
 
@@ -220,7 +221,7 @@ pixel，若始终限制为整数像点，会引入约半像素量级的量化误
 - 指定目录或默认目录没有对应影像时，报出完整查找路径和期望文件名。
 - 根据影像名称在 `targets.csv` 中查找 `reflector_id` 和 `truth_id`。
 - 根据 `truth_id` 从真值文件读取经纬度和高程；任一步匹配失败时立即报错。
-- 量测结果已存在且未指定 `--force` 时，默认拒绝覆盖。
+- 量测结果已存在时直接覆盖，并在控制台提示已覆盖原文件。
 
 ### 5.5 输出接口
 
@@ -437,7 +438,9 @@ LM 的优点：
 
 ### 6.5 命令行接口
 
-程序名：`rfm_localize_tool`
+程序名：`lunar_rpc_tool`
+
+子命令：`localize`
 
 参数：
 
@@ -514,7 +517,9 @@ LM 的优点：
 
 ### 7.2 命令行接口
 
-程序名：`accuracy_eval_tool`
+程序名：`lunar_rpc_tool`
+
+子命令：`evaluate`
 
 参数：
 
@@ -646,7 +651,7 @@ RMSE_h=\sqrt{\frac{1}{N}\sum D_{horizontal,i}^2}
 
 - 所有输入文件缺失都必须报出完整路径。
 - 所有结果文件写盘前检查必要字段。
-- 量测结果默认不覆盖，除非显式指定覆盖参数。
+- 量测结果默认直接覆盖，并在控制台提示是否覆盖了已有文件。
 - RFM 未收敛时不得写出有效结果。
 - 方案二缺少任一依赖时不得继续计算。
 - 真值和 RPC 不得修改。
@@ -661,9 +666,7 @@ RMSE_h=\sqrt{\frac{1}{N}\sum D_{horizontal,i}^2}
 - `rpc_measurement`：像点判读、窗口读取和量测结果输出。
 - `rpc_rfm`：RPC 解析、RFM 正算和 LM 反算。
 - `rpc_accuracy`：真值匹配、距离计算和统计输出。
-- `point_measure_tool`：量测程序入口。
-- `rfm_localize_tool`：RFM 反算程序入口。
-- `accuracy_eval_tool`：精度评定程序入口。
+- `lunar_rpc_tool`：统一程序入口，内部通过 `measure`、`localize` 和 `evaluate` 子命令分发。
 
 依赖关系：
 
@@ -671,7 +674,7 @@ RMSE_h=\sqrt{\frac{1}{N}\sum D_{horizontal,i}^2}
 - `rpc_measurement` 依赖 `rpc_common`、OpenCV 和 libtiff。
 - `rpc_rfm` 依赖 `rpc_common` 和 OpenCV。
 - `rpc_accuracy` 依赖 `rpc_common`，经纬度数学计算可使用 C++ 标准库。
-- 三个程序入口分别链接对应模块。
+- 统一程序入口链接所有已经实现的业务模块，尚未实现的子命令明确报错。
 
 ### 9.2 无绝对路径原则
 
@@ -749,7 +752,7 @@ Visual Studio 2022 的预设优先使用 `%VSINSTALLDIR%Common7\IDE\CommonExtens
 2. 确认 MSVC、VS 自带 CMake 和 VS 自带 Ninja 可用。
 3. 确认本地 OpenCV 和 libtiff 已位于 `third_party/`。
 4. 使用 CMake Preset 配置项目。
-5. 使用 CMake 构建三个可执行程序。
+5. 使用 CMake 构建统一可执行程序 `lunar_rpc_tool`。
 6. 使用参数文件和相对路径运行程序。
 
 首次构建示例流程：
@@ -789,3 +792,4 @@ Visual Studio 2022 的预设优先使用 `%VSINSTALLDIR%Common7\IDE\CommonExtens
 | v0.23 | 2026-10-08 | 移除自动下载方案，改用本地 OpenCV 和 libtiff 依赖 |
 | v0.24 | 2026-10-08 | 默认判读范围缩减为 200 m，优化显示刷新和中文控制台输出 |
 | v0.25 | 2026-10-08 | 增加 2 倍显示、亚像素自动候选、0.1 pixel 微调和小数坐标输出 |
+| v0.26 | 2026-10-08 | 合并为单一可执行程序并使用子命令分发，量测结果改为自动覆盖 |
