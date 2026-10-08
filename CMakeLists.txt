@@ -96,39 +96,17 @@ function(rpc_copy_third_party_runtime target_name)
     )
 endfunction()
 
-# 公共配置和数据结构模块。
-add_library(rpc_common STATIC
+# 单一可执行程序直接编译各模块源文件。
+# 源码仍按 common、rfm、point_measurement 分目录，但不再生成中间静态库。
+add_executable(lunar_rpc_tool
+    src/main.cpp
     src/common/config.cpp
-)
-target_include_directories(rpc_common PUBLIC "${PROJECT_SOURCE_DIR}/include")
-target_link_libraries(rpc_common PUBLIC third_party_deps)
-
-# RPC 模型与正算模块。
-add_library(rpc_rfm STATIC
     src/rfm/rpc_model.cpp
-)
-target_include_directories(rpc_rfm PUBLIC "${PROJECT_SOURCE_DIR}/include")
-target_link_libraries(rpc_rfm PUBLIC rpc_common)
-
-# 像点量测模块。
-add_library(rpc_measurement STATIC
     src/point_measurement/detector.cpp
     src/point_measurement/measurement_writer.cpp
     src/point_measurement/point_measurement_app.cpp
     src/point_measurement/tiff_roi_reader.cpp
 )
-target_include_directories(rpc_measurement PUBLIC "${PROJECT_SOURCE_DIR}/include")
-target_link_libraries(
-    rpc_measurement
-    PUBLIC
-        rpc_common
-        rpc_rfm
-        third_party_deps
-)
-
-# 统一命令行程序，通过子命令选择具体功能。
-add_executable(lunar_rpc_tool
-    src/main.cpp
-)
-target_link_libraries(lunar_rpc_tool PRIVATE rpc_measurement)
+target_include_directories(lunar_rpc_tool PRIVATE "${PROJECT_SOURCE_DIR}/include")
+target_link_libraries(lunar_rpc_tool PRIVATE third_party_deps)
 rpc_copy_third_party_runtime(lunar_rpc_tool)

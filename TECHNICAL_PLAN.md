@@ -1,6 +1,6 @@
 # RPC 直接定位技术方案
 
-> **版本：** v0.28（草案）
+> **版本：** v0.29（草案）
 > **状态：** 核心模块实施中
 > **更新日期：** 2026-10-08
 
@@ -662,19 +662,17 @@ RMSE_h=\sqrt{\frac{1}{N}\sum D_{horizontal,i}^2}
 
 ### 9.1 CMake 目标划分
 
-- `rpc_common`：配置、路径、日志和通用数据结构。
-- `rpc_measurement`：像点判读、窗口读取和量测结果输出。
-- `rpc_rfm`：RPC 解析、RFM 正算和 LM 反算。
-- `rpc_accuracy`：真值匹配、距离计算和统计输出。
-- `lunar_rpc_tool`：统一程序入口，内部通过 `measure`、`localize` 和 `evaluate` 子命令分发。
+- `lunar_rpc_tool`：唯一的可执行程序目标。
+- `common/`：配置、路径、日志和通用数据结构。
+- `point_measurement/`：像点判读、窗口读取和量测结果输出。
+- `rfm/`：RPC 解析、RFM 正算和 LM 反算。
+- `accuracy/`：真值匹配、距离计算和统计输出。
 
 依赖关系：
 
-- `rpc_common` 依赖 C++ 标准库。
-- `rpc_measurement` 依赖 `rpc_common`、OpenCV 和 libtiff。
-- `rpc_rfm` 依赖 `rpc_common` 和 OpenCV。
-- `rpc_accuracy` 依赖 `rpc_common`，经纬度数学计算可使用 C++ 标准库。
-- 统一程序入口链接所有已经实现的业务模块，尚未实现的子命令明确报错。
+- 上述模块是源码目录划分，不再分别创建静态库目标。
+- `lunar_rpc_tool` 直接编译各模块 `.cpp` 文件，避免在 `bin/` 中产生项目内部的 `.lib`。
+- 尚未实现的子命令仍然明确报错。
 
 ### 9.2 无绝对路径原则
 
@@ -722,7 +720,8 @@ Windows 构建目录：
 
 - Debug 使用 `out/build/x64-Debug/`。
 - Release 使用 `out/build/x64-Release/`。
-- 所有可执行文件、动态库、导入库、静态库和调试文件统一放在对应构建目录的 `bin/` 中。
+- 可执行文件、第三方运行库和调试文件统一放在对应构建目录的 `bin/` 中。
+- 项目内部模块直接编译进 `lunar_rpc_tool`，不再生成 `rpc_*.lib`。
 - CMake 和 Ninja 自己的中间文件保留在构建目录根层及 `CMakeFiles/` 中。
 
 Visual Studio 2022 的预设优先使用 `%VSINSTALLDIR%Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe` 和 VS 自带 Ninja。CMake 直接读取项目内的本地依赖，不执行依赖下载。
@@ -806,3 +805,4 @@ Visual Studio 2022 的预设优先使用 `%VSINSTALLDIR%Common7\IDE\CommonExtens
 | v0.26 | 2026-10-08 | 合并为单一可执行程序并使用子命令分发，量测结果改为自动覆盖 |
 | v0.27 | 2026-10-08 | 统一可执行文件改到构建目录根层，移除旧程序生成物 |
 | v0.28 | 2026-10-08 | 对齐参考项目输出布局，构建产物统一放入 `out/build/<配置>/bin` |
+| v0.29 | 2026-10-08 | 移除内部静态库目标，所有模块源文件直接编译进 `lunar_rpc_tool` |
