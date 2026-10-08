@@ -16,6 +16,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace rpc_localization {
@@ -29,6 +30,7 @@ struct Options {
     std::filesystem::path measurement_dir;
     std::filesystem::path rpc_dir;
     std::filesystem::path output_dir;
+    bool all = false;
     bool show_help = false;
 };
 
@@ -76,10 +78,13 @@ void print_help() {
         << "  --measurement-dir <目录>    覆盖量测目录\n"
         << "  --rpc-dir <目录>            覆盖 RPC 目录\n"
         << "  --output-dir <目录>         覆盖结果输出目录\n"
+        << "  --all                       批量处理该方法的全部目标或影像\n"
         << "  --help                      显示帮助\n\n"
         << "示例:\n"
         << "  lunar_rpc_tool localize --method fixed_height --image-name M175124932RE\n"
-        << "  lunar_rpc_tool localize --method two_image --target Apollo11\n";
+        << "  lunar_rpc_tool localize --method two_image --target Apollo11\n"
+        << "  lunar_rpc_tool localize --method fixed_height --all\n"
+        << "  lunar_rpc_tool localize --method two_image --all\n";
 }
 
 Options parse_options(int argc, char** argv) {
@@ -107,6 +112,8 @@ Options parse_options(int argc, char** argv) {
             options.rpc_dir = next();
         } else if (argument == "--output-dir") {
             options.output_dir = next();
+        } else if (argument == "--all") {
+            options.all = true;
         } else if (argument == "--help" || argument == "-h") {
             options.show_help = true;
         } else {
@@ -473,6 +480,78 @@ void run_two_image(
     std::cout << "方案二结果已保存: " << output_path.u8string() << '\n';
 }
 
+void run_all_fixed_height(
+    const Options& options,
+    const ProjectConfig& config,
+    const std::vector<TargetDefinition>& targets) {
+    std::vector<std::pair<std::string, std::string>> images;
+    images.reserve(targets.size() * 2);
+    for (const auto& target : targets) {
+        images.emplace_back(target.image_1, target.reflector_id);
+        images.emplace_back(target.image_2, target.reflector_id);
+    }
+
+    std::size_t success_count = 0;
+    std::size_t failure_count = 0;
+    for (std::size_t i = 0; i < images.size(); ++i) {
+        const auto& [image, reflector_id] = images[i];
+        std::cout << "\n[fixed_height " << (i + 1) << '/' << images.size()
+                  << "] image=" << image
+                  << " reflector=" << reflector_id << std::endl;
+
+        Options single_options = options;
+        single_options.all = false;
+        single_options.target = reflector_id;
+        single_options.image_names = {image};
+        try {
+            run_fixed_height(single_options, config, targets);
+            ++success_count;
+        } catch (const std::exception& error) {
+            ++failure_count;
+            std::cerr << "错误: " << error.what() << '\n';
+        }
+    }
+
+    std::cout << "\n批量 fixed_height 完成: 成功 " << success_count
+              << "，失败 " << failure_count << "。" << std::endl;
+    if (failure_count != 0) {
+        throw std::runtime_error("批量 fixed_height 存在失败项");
+    }
+}
+
+void run_all_two_image(
+    const Options& options,
+    const ProjectConfig& config,
+    const std::vector<TargetDefinition>& targets) {
+    std::size_t success_count = 0;
+    std::size_t failure_count = 0;
+    for (std::size_t i = 0; i < targets.size(); ++i) {
+        const auto& target = targets[i];
+        std::cout << "\n[two_image " << (i + 1) << '/' << targets.size()
+                  << "] reflector=" << target.reflector_id
+                  << " images=" << target.image_1 << ","
+                  << target.image_2 << std::endl;
+
+        Options single_options = options;
+        single_options.all = false;
+        single_options.target = target.reflector_id;
+        single_options.image_names.clear();
+        try {
+            run_two_image(single_options, config, targets);
+            ++success_count;
+        } catch (const std::exception& error) {
+            ++failure_count;
+            std::cerr << "错误: " << error.what() << '\n';
+        }
+    }
+
+    std::cout << "\n批量 two_image 完成: 成功 " << success_count
+              << "，失败 " << failure_count << "。" << std::endl;
+    if (failure_count != 0) {
+        throw std::runtime_error("批量 two_image 存在失败项");
+    }
+}
+
 }  // namespace
 
 int run_rfm_localization_app(int argc, char** argv) {
@@ -486,15 +565,28 @@ int run_rfm_localization_app(int argc, char** argv) {
         throw std::runtime_error(
             "必须指定 --method fixed_height 或 --method two_image");
     }
+    if (options.all &&
+        (!options.target.empty() || !options.image_names.empty())) {
+        throw std::runtime_error(
+            "--all 不能与 --target 或 --image-name 同时使用");
+    }
 
     const ProjectConfig config = load_project_config(options.config_path);
     const std::vector<TargetDefinition> targets =
         load_target_table(config.target_table);
 
     if (options.method == "fixed_height") {
-        run_fixed_height(options, config, targets);
+        if (options.all) {
+            run_all_fixed_height(options, config, targets);
+        } else {
+            run_fixed_height(options, config, targets);
+        }
     } else if (options.method == "two_image") {
-        run_two_image(options, config, targets);
+        if (options.all) {
+            run_all_two_image(options, config, targets);
+        } else {
+            run_two_image(options, config, targets);
+        }
     } else {
         throw std::runtime_error(
             "未知 --method: " + options.method +

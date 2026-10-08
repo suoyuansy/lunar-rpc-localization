@@ -9,6 +9,9 @@ All functions use one executable:
 ```bat
 build\vs2022-x64-debug\bin\lunar_rpc_tool.exe measure --image-name M175124932RE
 build\vs2022-x64-debug\bin\lunar_rpc_tool.exe localize --method fixed_height --image-name M175124932RE
+build\vs2022-x64-debug\bin\lunar_rpc_tool.exe localize --method fixed_height --all
+build\vs2022-x64-debug\bin\lunar_rpc_tool.exe localize --method two_image --target Apollo11
+build\vs2022-x64-debug\bin\lunar_rpc_tool.exe localize --method two_image --all
 build\vs2022-x64-debug\bin\lunar_rpc_tool.exe evaluate
 ```
 
