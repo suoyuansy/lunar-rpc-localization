@@ -381,8 +381,7 @@ int run_point_measurement_app(int argc, char** argv) {
     const int y0 =
         std::clamp(center_y - roi_height / 2, 0, info.height - roi_height);
 
-    std::cout << "影像: " << image_stem << '\n'
-              << "理论像点: sample=" << expected.sample
+    std::cout << "理论像点: sample=" << expected.sample
               << ", line=" << expected.line << '\n'
               << "ROI: " << x0 << ',' << y0 << " 尺寸 " << roi_width << 'x'
               << roi_height << '\n';
