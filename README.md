@@ -50,6 +50,11 @@ M181402751LE.tif
 - sample format 为 `SAMPLEFORMAT_IEEEFP`；
 - 条带式存储，不支持 tiled TIFF。
 
+其中：
+
+- `SAMPLEFORMAT_IEEEFP` 是 TIFF 文件中的一个元数据标记，表示像素按 IEEE 754 浮点数存储。当前项目读取的是 `float32`，因此像素值可以是小数，例如 `0.0123`，不是普通 8 位整数灰度。
+- 条带式存储表示 TIFF 按一行或多行一条带保存，程序可以逐行读取局部窗口；tiled TIFF 表示影像被切成矩形瓦片保存，当前读取器没有实现瓦片读取，因此会报错而不是强行加载整幅影像。
+
 RPC 正算和自动检测使用原始 float32，不先降成 8 位。
 
 ### 2.2 RPC 文件
@@ -223,10 +228,11 @@ build/vs2022-x64-release/bin/lunar_rpc_tool.exe
 
 ### 4.1 Debug 构建
 
-在 Visual Studio 2022 Developer Command Prompt 中执行：
+先进入项目根目录。下面的命令中的 `<项目根目录>` 替换成你实际下载得到的
+`RPC_localization` 目录即可：
 
 ```bat
-cd /d C:\Users\SuoYuan\Desktop\行星遥感\课程作业1\RPC_localization
+cd /d <项目根目录>
 cmake --fresh --preset vs2022-x64-debug
 cmake --build --preset vs2022-x64-debug
 ```
@@ -234,7 +240,7 @@ cmake --build --preset vs2022-x64-debug
 ### 4.2 Release 构建
 
 ```bat
-cd /d C:\Users\SuoYuan\Desktop\行星遥感\课程作业1\RPC_localization
+cd /d <项目根目录>
 cmake --fresh --preset vs2022-x64-release
 cmake --build --preset vs2022-x64-release
 ```
