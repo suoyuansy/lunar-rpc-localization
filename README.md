@@ -12,7 +12,8 @@ build\vs2022-x64-debug\bin\lunar_rpc_tool.exe localize --method fixed_height --i
 build\vs2022-x64-debug\bin\lunar_rpc_tool.exe localize --method fixed_height --all
 build\vs2022-x64-debug\bin\lunar_rpc_tool.exe localize --method two_image --target Apollo11
 build\vs2022-x64-debug\bin\lunar_rpc_tool.exe localize --method two_image --all
-build\vs2022-x64-debug\bin\lunar_rpc_tool.exe evaluate
+build\vs2022-x64-debug\bin\lunar_rpc_tool.exe evaluate --method fixed_height
+build\vs2022-x64-debug\bin\lunar_rpc_tool.exe evaluate --method two_image
 ```
 
 Release 构建使用：

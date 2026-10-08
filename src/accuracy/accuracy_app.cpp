@@ -26,6 +26,7 @@ constexpr double kPi = 3.14159265358979323846;
 
 struct Options {
     std::filesystem::path config_path;
+    std::string method;
     std::vector<std::filesystem::path> inputs;
     std::vector<std::filesystem::path> result_dirs;
     std::filesystem::path truth_file;
@@ -90,6 +91,7 @@ void print_help() {
         << "用法: lunar_rpc_tool evaluate [选项]\n\n"
         << "选项:\n"
         << "  --config <文件>             指定 rpc_project.ini\n"
+        << "  --method <方法>             必选：fixed_height 或 two_image\n"
         << "  --input <文件>              指定 RFM 结果 TXT，可重复\n"
         << "  --result-dir <目录>         指定结果目录，可重复\n"
         << "  --truth-file <文件>         覆盖真值文件\n"
@@ -97,8 +99,8 @@ void print_help() {
         << "  --output-dir <目录>         指定报告输出目录\n"
         << "  --help                      显示帮助\n\n"
         << "默认行为:\n"
-        << "  未指定输入时扫描 output/rfm/fixed_height 和 output/rfm/two_image。\n"
-        << "  默认报告保存到 output/accuracy/accuracy_report.txt。\n";
+        << "  未指定输入时只扫描所选方法对应的结果目录。\n"
+        << "  默认报告保存为 output/accuracy/<method>_accuracy_report.txt。\n";
 }
 
 Options parse_options(int argc, char** argv) {
@@ -114,6 +116,8 @@ Options parse_options(int argc, char** argv) {
 
         if (argument == "--config") {
             options.config_path = next();
+        } else if (argument == "--method") {
+            options.method = next();
         } else if (argument == "--input") {
             options.inputs.emplace_back(next());
         } else if (argument == "--result-dir") {
@@ -205,11 +209,16 @@ std::vector<std::filesystem::path> txt_files_in_directory(
 
 std::vector<std::filesystem::path> collect_result_files(
     const Options& options,
-    const ProjectConfig& config) {
+    const ProjectConfig& config,
+    const std::string& method) {
     std::vector<std::filesystem::path> files = options.inputs;
     std::vector<std::filesystem::path> result_dirs = options.result_dirs;
     if (files.empty() && result_dirs.empty()) {
-        result_dirs = {config.fixed_height_dir, config.two_image_dir};
+        result_dirs = {
+            method == "fixed_height"
+                ? config.fixed_height_dir
+                : config.two_image_dir,
+        };
     }
 
     for (const auto& directory : result_dirs) {
@@ -306,16 +315,17 @@ Statistics compute_statistics(
 void write_statistics_table(
     std::ostringstream& report,
     const std::vector<Statistics>& statistics) {
-    report << "scope\tcount\tmean_horizontal_m\trmse_horizontal_m"
-              "\tmean_3d_m\trmse_3d_m\n";
+    report << "| scope | count | mean_horizontal_m | rmse_horizontal_m "
+              "| mean_3d_m | rmse_3d_m |\n";
+    report << "|---|---:|---:|---:|---:|---:|\n";
     for (const auto& item : statistics) {
-        report << item.scope << '\t'
-               << item.count << '\t'
+        report << "| " << item.scope
+               << " | " << item.count
                << std::fixed << std::setprecision(4)
-               << item.mean_horizontal_m << '\t'
-               << item.rmse_horizontal_m << '\t'
-               << item.mean_3d_m << '\t'
-               << item.rmse_3d_m << '\n';
+               << " | " << item.mean_horizontal_m
+               << " | " << item.rmse_horizontal_m
+               << " | " << item.mean_3d_m
+               << " | " << item.rmse_3d_m << " |\n";
     }
 }
 
@@ -338,9 +348,20 @@ int run_accuracy_evaluation_app(int argc, char** argv) {
         print_help();
         return 0;
     }
+    if (options.method.empty()) {
+        throw std::runtime_error(
+            "evaluate 必须指定 --method fixed_height 或 --method two_image");
+    }
+    if (options.method != "fixed_height" &&
+        options.method != "two_image") {
+        throw std::runtime_error(
+            "未知 --method: " + options.method +
+            "，可选值为 fixed_height 或 two_image");
+    }
 
     const ProjectConfig config = load_project_config(options.config_path);
-    const auto result_files = collect_result_files(options, config);
+    const auto result_files =
+        collect_result_files(options, config, options.method);
     const auto targets = load_target_table(config.target_table);
 
     std::unordered_map<std::string, std::string> truth_ids;
@@ -357,6 +378,12 @@ int run_accuracy_evaluation_app(int argc, char** argv) {
 
     for (const auto& file : result_files) {
         const ResultRecord result = read_result(file);
+        if (result.method != options.method) {
+            throw std::runtime_error(
+                "结果文件方法不匹配: " + file.u8string() +
+                "，文件 method=" + result.method +
+                "，评价 method=" + options.method);
+        }
         const auto mapping = truth_ids.find(result.reflector_id);
         if (mapping == truth_ids.end()) {
             throw std::runtime_error(
@@ -376,72 +403,74 @@ int run_accuracy_evaluation_app(int argc, char** argv) {
         records.push_back(evaluate_record(result, truth->second));
     }
 
-    std::map<std::pair<std::string, std::string>,
-             std::vector<const AccuracyRecord*>>
-        reflector_method_groups;
-    std::map<std::string, std::vector<const AccuracyRecord*>> method_groups;
+    std::map<std::string, std::vector<const AccuracyRecord*>> reflector_groups;
     std::vector<const AccuracyRecord*> all_records;
     for (const auto& record : records) {
-        reflector_method_groups[
-            {record.result.reflector_id, record.result.method}]
-            .push_back(&record);
-        method_groups[record.result.method].push_back(&record);
+        reflector_groups[record.result.reflector_id].push_back(&record);
         all_records.push_back(&record);
     }
 
     std::vector<Statistics> grouped_statistics;
-    for (const auto& [key, group] : reflector_method_groups) {
+    for (const auto& [reflector_id, group] : reflector_groups) {
         grouped_statistics.push_back(compute_statistics(
-            key.first + "/" + key.second,
-            group));
-    }
-    for (const auto& [method, group] : method_groups) {
-        grouped_statistics.push_back(compute_statistics(
-            "method=" + method,
+            "reflector=" + reflector_id,
             group));
     }
     grouped_statistics.push_back(
-        compute_statistics("all", all_records));
+        compute_statistics("method=" + options.method, all_records));
 
     std::ostringstream report;
     report << "# RPC Localization Accuracy Report\n\n";
+    report << "method=" << options.method << '\n';
     report << "moon_radius_m=" << std::fixed << std::setprecision(1)
            << kMoonRadiusM << "\n";
     report << "result_count=" << records.size() << "\n\n";
 
-    report << "## Detailed Results\n";
-    report << "input\treflector_id\tmethod\tsource_images"
-              "\tsolved_longitude\tsolved_latitude\tsolved_height_m"
-              "\ttruth_longitude\ttruth_latitude\ttruth_height_m"
-              "\tdelta_longitude_deg\tdelta_latitude_deg\tdelta_height_m"
-              "\teast_error_m\tnorth_error_m"
-              "\thorizontal_distance_m\tdistance_3d_m\n";
-    for (const auto& record : records) {
-        report << record.result.path.u8string() << '\t'
-               << record.result.reflector_id << '\t'
-               << record.result.method << '\t'
-               << record.result.source_images << '\t'
-               << std::fixed << std::setprecision(10)
-               << record.result.solved.longitude_deg << '\t'
-               << record.result.solved.latitude_deg << '\t'
-               << std::setprecision(4)
-               << record.result.solved.height_m << '\t'
-               << record.truth.longitude_deg << '\t'
-               << record.truth.latitude_deg << '\t'
-               << record.truth.height_m << '\t'
-               << std::setprecision(10)
-               << record.delta_longitude_deg << '\t'
-               << record.delta_latitude_deg << '\t'
-               << std::setprecision(4)
-               << record.delta_height_m << '\t'
-               << record.east_error_m << '\t'
-               << record.north_error_m << '\t'
-               << record.horizontal_distance_m << '\t'
-               << record.distance_3d_m << '\n';
+    report << "## Detailed Results\n\n";
+    report << "| # | file | reflector_id | source_images "
+              "| solved_lon(deg) | solved_lat(deg) | solved_h(m) "
+              "| truth_lon(deg) | truth_lat(deg) | truth_h(m) "
+              "| dlon(deg) | dlat(deg) | dh(m) "
+              "| east(m) | north(m) | horizontal(m) | distance_3d(m) |\n";
+    report << "|---:|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n";
+    for (std::size_t i = 0; i < records.size(); ++i) {
+        const auto& record = records[i];
+        report << "| " << (i + 1)
+               << " | " << record.result.path.filename().u8string()
+               << " | " << record.result.reflector_id
+               << " | " << record.result.source_images
+               << " | " << std::fixed << std::setprecision(10)
+               << record.result.solved.longitude_deg
+               << " | " << record.result.solved.latitude_deg
+               << " | " << std::setprecision(4)
+               << record.result.solved.height_m
+               << " | " << std::setprecision(10)
+               << record.truth.longitude_deg
+               << " | " << record.truth.latitude_deg
+               << " | " << std::setprecision(4)
+               << record.truth.height_m
+               << " | " << std::setprecision(10)
+               << record.delta_longitude_deg
+               << " | " << record.delta_latitude_deg
+               << " | " << std::setprecision(4)
+               << record.delta_height_m
+               << " | " << record.east_error_m
+               << " | " << record.north_error_m
+               << " | " << record.horizontal_distance_m
+               << " | " << record.distance_3d_m << " |\n";
     }
 
-    report << "\n## Group Statistics\n";
+    report << "\n## Group Statistics\n\n";
     write_statistics_table(report, grouped_statistics);
+
+    report << "\n## Metric Definitions\n\n";
+    report << "- `dlon` / `dlat`: solved minus truth longitude/latitude, degree.\n";
+    report << "- `dh`: solved minus truth height, meter.\n";
+    report << "- `east`: east-west lunar surface error, meter.\n";
+    report << "- `north`: north-south lunar surface error, meter.\n";
+    report << "- `horizontal`: sqrt(east^2 + north^2), meter.\n";
+    report << "- `distance_3d`: sqrt(horizontal^2 + dh^2), meter.\n";
+    report << "- Mean/RMSE statistics are computed over all evaluated files.\n";
 
     const std::string content = report.str();
     std::cout << content;
@@ -449,9 +478,11 @@ int run_accuracy_evaluation_app(int argc, char** argv) {
     const auto output_path = options.output.empty()
                                  ? (options.output_dir.empty()
                                         ? config.accuracy_dir /
-                                              "accuracy_report.txt"
+                                              (options.method +
+                                               "_accuracy_report.txt")
                                         : options.output_dir /
-                                              "accuracy_report.txt")
+                                              (options.method +
+                                               "_accuracy_report.txt"))
                                  : options.output;
     write_report(output_path, content);
     std::cout << "\n精度报告已保存: " << output_path.u8string() << '\n';

@@ -1,6 +1,6 @@
 # RPC 直接定位技术方案
 
-> **版本：** v0.48（草案）
+> **版本：** v0.49（草案）
 > **状态：** 核心模块实施中
 > **更新日期：** 2026-10-08
 
@@ -553,6 +553,7 @@ LM 的优点：
 参数：
 
 - `--config`：可选，指定参数文件。
+- `--method`：必选，取值为 `fixed_height` 或 `two_image`，只评价该方法的结果。
 - `--input`：可重复，指定一个或多个 RFM 结果 TXT。
 - `--result-dir`：可重复，指定结果目录。
 - `--truth-file`：可选，覆盖真值文件。
@@ -561,9 +562,10 @@ LM 的优点：
 
 默认行为：
 
-- 未指定输入时，扫描 `output/rfm/fixed_height/` 和 `output/rfm/two_image/`。
+- 未指定输入时，只扫描所选方法对应的结果目录。
 - 未指定真值文件时，使用 `rpc_project.ini` 中的 `truth_file`。
-- 未指定输出时，保存到 `output/accuracy/accuracy_report.txt`。
+- 未指定输出时，方案一保存到 `output/accuracy/fixed_height_accuracy_report.txt`。
+- 未指定输出时，方案二保存到 `output/accuracy/two_image_accuracy_report.txt`。
 
 错误规则：
 
@@ -854,3 +856,4 @@ Visual Studio 2022 的预设优先使用 `%VSINSTALLDIR%Common7\IDE\CommonExtens
 | v0.46 | 2026-10-08 | RFM 输出增加 `solver=LM`，并固定控制台经纬度高程小数位数 |
 | v0.47 | 2026-10-08 | 增加 `localize --all` 批量反算全部影像或全部目标 |
 | v0.48 | 2026-10-08 | 完成批量精度评定模块和 `evaluate` 子命令 |
+| v0.49 | 2026-10-08 | 按方法分别生成精度评定报告，并改为 Markdown 表格 |
