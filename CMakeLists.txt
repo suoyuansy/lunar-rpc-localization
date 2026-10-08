@@ -118,7 +118,7 @@ add_executable(lunar_rpc_tool
 set_target_properties(
     lunar_rpc_tool
     PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/src"
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
 )
 target_link_libraries(lunar_rpc_tool PRIVATE rpc_measurement)
 rpc_copy_third_party_runtime(lunar_rpc_tool)
