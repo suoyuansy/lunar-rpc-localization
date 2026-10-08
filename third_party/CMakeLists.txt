@@ -48,3 +48,18 @@ target_link_libraries(third_party_deps INTERFACE opencv_local tiff_local)
 
 message(STATUS "使用本地 OpenCV: ${RPC_OPENCV_ROOT}")
 message(STATUS "使用本地 libtiff: ${RPC_TIFF_ROOT}")
+
+# 将本地 DLL 复制到可执行程序目录，避免运行时找不到动态库。
+function(rpc_copy_third_party_runtime target_name)
+    add_custom_command(
+        TARGET ${target_name}
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:opencv_local>
+            $<TARGET_FILE_DIR:${target_name}>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:tiff_local>
+            $<TARGET_FILE_DIR:${target_name}>
+        COMMENT "复制 OpenCV 和 libtiff 运行库"
+    )
+endfunction()

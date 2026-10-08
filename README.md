@@ -8,7 +8,9 @@ The project supports point measurement, fixed-height LM inversion, two-image LM 
 
 - Technical plan: complete, see `TECHNICAL_PLAN.md`.
 - Progress tracking: see `PROGRESS.md`.
-- Implementation: not started.
+- Build scaffold: complete.
+- Point measurement module: initial implementation complete; supports TIFF ROI reading, automatic candidate detection, mouse/arrow-key adjustment, `q` confirmation, and TXT output.
+- RPC inverse and accuracy modules: not started.
 
 ## Planned Modules
 
@@ -34,8 +36,6 @@ The project supports point measurement, fixed-height LM inversion, two-image LM 
 - libtiff
 - Local prebuilt third-party dependencies under `third_party/`
 
-Detailed build instructions are in `docs/BUILDING.md`.
-
 ## Data Policy
 
 Large TIFF files and local third-party libraries are not committed.
@@ -49,11 +49,11 @@ Large TIFF files and local third-party libraries are not committed.
 
 ## Repository Layout
 
+- `config/rpc_project.ini`: runtime paths and ROI settings.
+- `config/targets.csv`: target, image, truth ID, and resolution mapping.
 - `config/`: runtime configuration and target tables.
 - `data/`: local input data with separate subdirectories.
 - `include/`: public headers grouped by module.
 - `src/`: source files grouped by module.
 - `third_party/`: local OpenCV and libtiff dependencies.
-- `scripts/`: dependency setup and helper scripts.
-- `tests/`: module and integration tests.
 - `output/`: generated measurement, RFM, accuracy, and log files.
