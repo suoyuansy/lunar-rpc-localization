@@ -28,16 +28,20 @@ The project supports point measurement, fixed-height LM inversion, two-image LM 
 ## Technology Stack
 
 - C++17
-- CMake and CMake Presets
+- Visual Studio 2022 Developer Command Prompt
+- Visual Studio CMake and Ninja
 - OpenCV
 - libtiff
 - vcpkg manifest mode for third-party dependency installation
+- Visual Studio bundled vcpkg is preferred on Windows
 
 ## Data Policy
 
 Large TIFF files and downloaded third-party libraries are not committed.
 
-- Original and local data belong under `data/`, but large images are ignored by Git.
+- TIFF images are stored under `data/images/` and ignored by Git.
+- RPC files are stored under `data/rpc/`.
+- Truth coordinates are stored under `data/truth/`.
 - Generated results belong under `output/`.
 - Downloaded vcpkg content belongs under `third_party/vcpkg/` and is ignored by Git.
 
@@ -51,4 +55,3 @@ Large TIFF files and downloaded third-party libraries are not committed.
 - `scripts/`: dependency setup and helper scripts.
 - `tests/`: module and integration tests.
 - `output/`: generated measurement, RFM, accuracy, and log files.
-

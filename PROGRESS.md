@@ -1,7 +1,7 @@
 # Project Progress
 
 > **Last updated:** 2026-10-08
-> **Plan version:** v0.21
+> **Plan version:** v0.22
 
 ## Status Legend
 
@@ -16,8 +16,8 @@
 
 | ID | Module or Task | Status | Progress | Current Result | Next Step |
 |---|---|---:|---|---|---|
-| P0 | Requirements and data understanding | 已完成 | 100% | Requirement PDF, data inventory, RPC/truth analysis complete | Keep as reference for implementation |
-| P1 | Technical plan and interfaces | 已完成 | 100% | `TECHNICAL_PLAN.md` v0.21 complete | Implement according to the confirmed interfaces |
+| P0 | Requirements and data understanding | 已完成 | 100% | Requirement PDF and data inventory complete; data moved to `data/images`, `data/rpc`, and `data/truth` | Keep as reference for implementation |
+| P1 | Technical plan and interfaces | 已完成 | 100% | `TECHNICAL_PLAN.md` v0.22 complete | Implement according to the confirmed interfaces |
 | P2 | Git repository and remote connection | 已完成 | 100% | GitHub remote configured | Maintain one commit per completed code task |
 | P3 | CMake project scaffold | 未开始 | 0% | None | Create root CMake config and module targets |
 | P4 | vcpkg dependency bootstrap | 未开始 | 0% | None | Add manifest, presets, and bootstrap script |
@@ -38,4 +38,3 @@ After each code task is completed:
 2. Record the completed deliverables in `Current Result`.
 3. Update the next pending item.
 4. Commit and push the corresponding code and this progress table together.
-

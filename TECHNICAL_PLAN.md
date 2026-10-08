@@ -1,6 +1,6 @@
 # RPC 直接定位技术方案
 
-> **版本：** v0.21（草案）
+> **版本：** v0.22（草案）
 > **状态：** 待讨论，暂不实施代码
 > **更新日期：** 2026-10-08
 
@@ -8,6 +8,10 @@
 
 - 编程语言：C++17。
 - 项目构建：CMake。
+- 默认 Windows 构建环境：Visual Studio 2022 Developer Command Prompt。
+- 默认 Windows 编译器：MSVC。
+- 默认使用 Visual Studio 自带的 CMake、Ninja 和 vcpkg。
+- 不使用 MSYS2 UCRT64 作为主构建方案。
 - 图像处理、矩阵运算和交互显示：OpenCV。
 - TIFF 局部窗口读取：libtiff。
 - 像点坐标：0 基、像素中心坐标。
@@ -674,6 +678,8 @@ RMSE_h=\sqrt{\frac{1}{N}\sum D_{horizontal,i}^2}
 
 可以把它理解成 C++ 项目中的“Conda 式依赖管理”，但 vcpkg 按编译器、系统架构和构建类型管理 C++ 依赖。
 
+当前机器优先使用 Visual Studio 2022 自带的 vcpkg，通过 `%VSINSTALLDIR%VC\vcpkg` 定位，不在项目文件中写死绝对路径。
+
 Manifest 模式指项目根目录或指定目录中存在 `vcpkg.json`，其中声明项目直接依赖的库。它与全局安装模式不同，依赖属于当前项目，并按 baseline 固定版本。
 
 Manifest 模式的优点：
@@ -694,19 +700,17 @@ Manifest 模式的优点：
 
 自动初始化方式：
 
-1. `scripts/bootstrap_deps.ps1` 检查 `third_party/vcpkg/` 是否存在。
-2. 如果不存在，脚本自动从 GitHub 克隆指定版本的 vcpkg 到该目录。
-3. 脚本运行 vcpkg 的 bootstrap 程序，生成 vcpkg 可执行文件。
-4. 脚本不要求用户手动复制任何 `.lib`、`.dll` 或头文件。
-5. `CMakePresets.json` 使用项目内 `third_party/vcpkg` 的工具链文件，也可以通过 `VCPKG_ROOT` 覆盖。
-6. CMake 配置时读取 `third_party/vcpkg.json`，自动下载并安装 OpenCV 和 libtiff。
-7. 使用 `VCPKG_INSTALLED_DIR` 将安装结果放到 `third_party/vcpkg_installed/`。
+1. 在 Visual Studio 2022 Developer Command Prompt 中优先查找 `%VSINSTALLDIR%VC\vcpkg\vcpkg.exe`。
+2. 如果 Visual Studio 没有可用 vcpkg，再由 `scripts/bootstrap_deps.ps1` 从 GitHub 下载。
+3. CMake 配置时读取 `third_party/vcpkg.json`，自动下载并安装 OpenCV 和 libtiff。
+4. 使用 `VCPKG_INSTALLED_DIR` 将安装结果放到 `third_party/vcpkg_installed/`。
+5. 不要求用户手动复制任何 `.lib`、`.dll` 或头文件。
 
 不把 vcpkg 下载内容提交到版本库；提交 `vcpkg.json`、baseline 和初始化脚本即可。
 
 首次下载和编译 OpenCV 可能需要较长时间，并依赖网络和二进制缓存，但后续可复用 vcpkg 缓存。
 
-如果网络不可用，允许使用已经配置好的 `VCPKG_ROOT` 或系统中通过 CMake 能找到的 OpenCV 和 libtiff，但程序必须给出明确缺少依赖的错误。
+如果网络不可用，允许使用已经配置好的 Visual Studio vcpkg 或系统依赖，但程序必须给出明确缺少依赖的错误。
 
 推荐提交的依赖相关文件：
 
@@ -719,8 +723,9 @@ Manifest 模式的优点：
 
 vcpkg 不依赖 Visual Studio IDE，IDE 只是调用 CMake 的前端。真正决定依赖是否兼容的是编译器和目标平台。
 
-- Visual Studio IDE、VS Code、CLion、Qt Creator 和命令行都可以使用同一套 vcpkg + CMake 工程。
-- 在 Windows 上选择 `x64-windows` 时通常使用 MSVC，需要安装 Visual Studio Build Tools 或完整 Visual Studio 的 C++ 工具链，但不强制使用 Visual Studio IDE。
+- 当前项目优先在 Visual Studio 2022 Developer Command Prompt 中构建。
+- VS Code、CLion、Qt Creator 仍可使用 CMake Presets，但 Windows 默认继续采用 MSVC triplet。
+- 在 Windows 上使用 `x64-windows` 时采用 MSVC。
 - 如果使用 MinGW，可以选择 `x64-mingw-dynamic` 或对应 triplet，并改用 GCC/MinGW 编译器。
 - 如果使用 Linux，可以选择 `x64-linux`。
 - 如果切换到不同编译器或不同架构，vcpkg 需要按新 triplet 重新安装依赖，这是 C++ ABI 的正常要求。
@@ -731,16 +736,14 @@ vcpkg 不依赖 Visual Studio IDE，IDE 只是调用 CMake 的前端。真正决
 
 建议提供以下预设：
 
-- `windows-msvc-debug`。
-- `windows-msvc-release`。
-- `windows-mingw-debug`。
-- `windows-mingw-release`。
+- `vs2022-x64-debug`。
+- `vs2022-x64-release`。
 - `linux-gcc-debug`。
 - `linux-gcc-release`。
 - `macos-clang-debug`。
 - `macos-clang-release`。
 
-每个预设只配置构建类型、编译器、vcpkg triplet、工具链和构建目录，不保存机器相关的绝对路径。
+Visual Studio 2022 的预设优先使用 `%VSINSTALLDIR%Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe`、VS 自带 Ninja 和 `%VSINSTALLDIR%VC\vcpkg`。
 
 预设与 IDE 的配合：
 
@@ -754,9 +757,10 @@ vcpkg 不依赖 Visual Studio IDE，IDE 只是调用 CMake 的前端。真正决
 - `data/images/`：默认原始 TIFF。
 - `data/rpc/`：默认 RPC。
 - `data/truth/`：默认真值。
-- 6 GB 级原始 TIFF 不复制到仓库中。
-- 现有数据可以通过 `rpc_project.ini` 中的相对路径指向原位置。
-- 如果以后移动数据到 `data/`，只修改参数文件即可。
+- 现有 6 景 TIFF 已移动到 `data/images/`。
+- 6 个 RPC 文件已移动到 `data/rpc/`。
+- 真值文件已移动到 `data/truth/`。
+- 6 GB 级原始 TIFF 不提交到 GitHub。
 
 ### 9.6 输出目录
 
@@ -769,18 +773,20 @@ vcpkg 不依赖 Visual Studio IDE，IDE 只是调用 CMake 的前端。真正决
 
 ### 9.7 构建流程
 
-1. 运行依赖初始化脚本自动准备 OpenCV 和 libtiff。
-2. 使用 CMake Preset 配置项目，CMake 自动检查并安装缺失依赖。
-3. 使用 CMake 构建三个可执行程序。
-4. 使用 CTest 运行模块测试。
-5. 使用参数文件和相对路径运行程序。
+1. 打开 Visual Studio 2022 Developer Command Prompt。
+2. 确认 MSVC、VS 自带 CMake、VS 自带 Ninja 和 VS 自带 vcpkg 可用。
+3. 使用 VS vcpkg 或初始化脚本准备 OpenCV 和 libtiff。
+4. 使用 CMake Preset 配置项目。
+5. 使用 CMake 构建三个可执行程序。
+6. 使用 CTest 运行模块测试。
+7. 使用参数文件和相对路径运行程序。
 
 首次构建示例流程：
 
-1. 执行 `scripts/bootstrap_deps.ps1`。
-2. 执行 `cmake --preset windows-release`。
-3. 执行 `cmake --build --preset windows-release`。
-4. 执行 `ctest --preset windows-release`。
+1. 执行 `scripts/bootstrap_deps.ps1`，或在 VS 环境直接使用自带 vcpkg。
+2. 执行 `cmake --preset vs2022-x64-release`。
+3. 执行 `cmake --build --preset vs2022-x64-release`。
+4. 执行 `ctest --preset vs2022-x64-release`。
 
 用户拿到项目后，只需要安装 Git、CMake 和 C++ 编译环境。OpenCV、libtiff 和 vcpkg 由脚本及 CMake 自动准备到本地 `third_party/` 或构建目录，不需要手动移植第三方库。
 
@@ -809,3 +815,4 @@ vcpkg 不依赖 Visual Studio IDE，IDE 只是调用 CMake 的前端。真正决
 | v0.19 | 2026-10-08 | 明确 CMake 工程分层、无绝对路径规则、vcpkg 自动依赖和 data/output 目录 |
 | v0.20 | 2026-10-08 | 细化 vcpkg 自动下载、CMake 联动和首次构建流程 |
 | v0.21 | 2026-10-08 | 说明 manifest 模式与 IDE 无关，补充编译器 triplet 和 IDE 适配规则 |
+| v0.22 | 2026-10-08 | 优先使用 VS2022 Developer Command Prompt、VS CMake/Ninja/vcpkg，并更新数据目录 |
