@@ -1,6 +1,6 @@
 # RPC 直接定位技术方案
 
-> **版本：** v0.29（草案）
+> **版本：** v0.30（草案）
 > **状态：** 核心模块实施中
 > **更新日期：** 2026-10-08
 
@@ -718,8 +718,8 @@ RMSE_h=\sqrt{\frac{1}{N}\sum D_{horizontal,i}^2}
 
 Windows 构建目录：
 
-- Debug 使用 `out/build/x64-Debug/`。
-- Release 使用 `out/build/x64-Release/`。
+- Debug 使用 `build/vs2022-x64-debug/`。
+- Release 使用 `build/vs2022-x64-release/`。
 - 可执行文件、第三方运行库和调试文件统一放在对应构建目录的 `bin/` 中。
 - 项目内部模块直接编译进 `lunar_rpc_tool`，不再生成 `rpc_*.lib`。
 - CMake 和 Ninja 自己的中间文件保留在构建目录根层及 `CMakeFiles/` 中。
@@ -762,8 +762,8 @@ Visual Studio 2022 的预设优先使用 `%VSINSTALLDIR%Common7\IDE\CommonExtens
 6. 使用参数文件和相对路径运行程序。
 
 构建完成后，统一可执行文件位于当前构建目录的 `bin/` 中。例如
-`out/build/x64-Debug/bin/lunar_rpc_tool.exe` 或
-`out/build/x64-Release/bin/lunar_rpc_tool.exe`。
+`build/vs2022-x64-debug/bin/lunar_rpc_tool.exe` 或
+`build/vs2022-x64-release/bin/lunar_rpc_tool.exe`。
 
 首次构建示例流程：
 
@@ -804,5 +804,6 @@ Visual Studio 2022 的预设优先使用 `%VSINSTALLDIR%Common7\IDE\CommonExtens
 | v0.25 | 2026-10-08 | 增加 2 倍显示、亚像素自动候选、0.1 pixel 微调和小数坐标输出 |
 | v0.26 | 2026-10-08 | 合并为单一可执行程序并使用子命令分发，量测结果改为自动覆盖 |
 | v0.27 | 2026-10-08 | 统一可执行文件改到构建目录根层，移除旧程序生成物 |
-| v0.28 | 2026-10-08 | 对齐参考项目输出布局，构建产物统一放入 `out/build/<配置>/bin` |
+| v0.28 | 2026-10-08 | 对齐参考项目输出布局，构建产物统一放入各自构建目录的 `bin` |
 | v0.29 | 2026-10-08 | 移除内部静态库目标，所有模块源文件直接编译进 `lunar_rpc_tool` |
+| v0.30 | 2026-10-08 | 保留原 Visual Studio 预设构建目录，仅在各自目录内统一使用 `bin` 布局 |
