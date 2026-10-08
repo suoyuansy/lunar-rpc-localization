@@ -7,9 +7,15 @@ The project supports point measurement, fixed-height LM inversion, two-image LM 
 All functions use one executable:
 
 ```bat
-build\vs2022-x64-debug\lunar_rpc_tool.exe measure --image-name M175124932RE
-build\vs2022-x64-debug\lunar_rpc_tool.exe localize --method fixed_height --image-name M175124932RE
-build\vs2022-x64-debug\lunar_rpc_tool.exe evaluate
+out\build\x64-Debug\bin\lunar_rpc_tool.exe measure --image-name M175124932RE
+out\build\x64-Debug\bin\lunar_rpc_tool.exe localize --method fixed_height --image-name M175124932RE
+out\build\x64-Debug\bin\lunar_rpc_tool.exe evaluate
+```
+
+Release 构建使用：
+
+```bat
+out\build\x64-Release\bin\lunar_rpc_tool.exe
 ```
 
 ## Current Status

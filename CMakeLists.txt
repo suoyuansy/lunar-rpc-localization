@@ -18,6 +18,21 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     message(FATAL_ERROR "请在独立 build 目录中构建项目")
 endif()
 
+# 统一输出布局：可执行文件、库文件、运行库和调试文件都放在构建目录的 bin 下。
+set(RPC_OUTPUT_DIR "${CMAKE_BINARY_DIR}/bin")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${RPC_OUTPUT_DIR}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${RPC_OUTPUT_DIR}")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${RPC_OUTPUT_DIR}")
+set(CMAKE_PDB_OUTPUT_DIRECTORY "${RPC_OUTPUT_DIR}")
+set(CMAKE_COMPILE_PDB_OUTPUT_DIRECTORY "${RPC_OUTPUT_DIR}")
+foreach(config Debug Release RelWithDebInfo MinSizeRel)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${config} "${RPC_OUTPUT_DIR}")
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${config} "${RPC_OUTPUT_DIR}")
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${config} "${RPC_OUTPUT_DIR}")
+    set(CMAKE_PDB_OUTPUT_DIRECTORY_${config} "${RPC_OUTPUT_DIR}")
+    set(CMAKE_COMPILE_PDB_OUTPUT_DIRECTORY_${config} "${RPC_OUTPUT_DIR}")
+endforeach()
+
 # 本地 OpenCV 目录。
 # 当前使用 OpenCV 4.12.0 的预编译 world 包。
 set(RPC_OPENCV_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/third_party/opencv")
@@ -114,11 +129,6 @@ target_link_libraries(
 # 统一命令行程序，通过子命令选择具体功能。
 add_executable(lunar_rpc_tool
     src/main.cpp
-)
-set_target_properties(
-    lunar_rpc_tool
-    PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
 )
 target_link_libraries(lunar_rpc_tool PRIVATE rpc_measurement)
 rpc_copy_third_party_runtime(lunar_rpc_tool)
