@@ -77,7 +77,7 @@ function(rpc_copy_third_party_runtime target_name)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             $<TARGET_FILE:tiff_local>
             $<TARGET_FILE_DIR:${target_name}>
-        COMMENT "复制 OpenCV 和 libtiff 运行库"
+        COMMENT "Copy OpenCV and libtiff runtime DLLs"
     )
 endfunction()
 

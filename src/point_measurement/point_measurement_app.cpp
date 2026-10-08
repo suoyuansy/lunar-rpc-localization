@@ -279,6 +279,9 @@ int run_point_measurement_app(int argc, char** argv) {
     cv::namedWindow(window_name, cv::WINDOW_AUTOSIZE);
     cv::setMouseCallback(window_name, on_mouse, &state);
 
+    std::cout << "操作提示: 鼠标左键点击粗调，方向键微调 1 pixel，"
+                 "q 确认，Esc 取消。\n";
+
     while (true) {
         if (cv::getWindowProperty(window_name, cv::WND_PROP_VISIBLE) < 1.0) {
             state.cancelled = true;
@@ -308,6 +311,26 @@ int run_point_measurement_app(int argc, char** argv) {
             0.65,
             cv::Scalar(0, 255, 0),
             2);
+
+        const std::string help =
+            "L-click: move  Arrows: 1 px  q: confirm  Esc: cancel";
+        int baseline = 0;
+        const auto help_size = cv::getTextSize(
+            help,
+            cv::FONT_HERSHEY_SIMPLEX,
+            0.45,
+            1,
+            &baseline);
+        const double help_scale =
+            std::min(1.0, (display.cols - 20.0) / std::max(1, help_size.width));
+        cv::putText(
+            display,
+            help,
+            cv::Point(10, display.rows - 12),
+            cv::FONT_HERSHEY_SIMPLEX,
+            0.45 * help_scale,
+            cv::Scalar(255, 255, 0),
+            1);
         cv::imshow(window_name, display);
 
         const int key = cv::waitKeyEx(10);
