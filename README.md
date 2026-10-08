@@ -24,7 +24,7 @@ build\vs2022-x64-release\bin\lunar_rpc_tool.exe
 - Progress tracking: see `PROGRESS.md`.
 - Build scaffold: complete.
 - Unified CLI: one `lunar_rpc_tool` executable dispatches `measure`, `localize`, and `evaluate`.
-- Point measurement module: initial implementation complete; supports TIFF ROI reading, subpixel automatic candidate detection, single-channel 8-bit display using a linear 1%-99% percentile stretch, mouse/0.1-pixel arrow-key adjustment, `q` confirmation, automatic overwrite, and decimal TXT output.
+- Point measurement module: initial implementation complete; supports TIFF ROI reading, subpixel automatic candidate detection, single-channel 8-bit display using a linear 0.1%-99.9% percentile stretch, mouse/0.1-pixel arrow-key adjustment, `q` confirmation, automatic overwrite, and decimal TXT output.
 - Batch measurement: `measure --image-dir <directory>` processes all TIFF files in filename order and advances to the next image after each confirmation.
 - Measurement display and console output include the reflector identifier, truth identifier, source image, image pair, and current pixel coordinates; display scale is chosen dynamically for a similar visible extent across resolutions.
 - RPC inverse modules: `fixed_height` and `two_image` localize commands implemented; accuracy evaluation is not started.
