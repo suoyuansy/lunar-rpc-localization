@@ -15,7 +15,7 @@
 - 图像处理、矩阵运算和交互显示：OpenCV。
 - TIFF 局部窗口读取：libtiff。
 - 像点坐标：0 基、像素中心坐标。
-- 判读范围：以理论像点为中心的 `500 m × 500 m` 正方形。
+- 判读范围：以理论像点为中心的 `200 m × 200 m` 正方形。
 - 判读方法：单点自动检测后，人工调整。
 - 鼠标点击：候选点立即跳到点击位置。
 - 方向键：以 1 pixel 为步长调整。
@@ -59,7 +59,6 @@
 - `src/`：模块源文件和程序入口。
 - `third_party/`：本地 OpenCV 和 libtiff 依赖。
 - `scripts/`：依赖安装和辅助脚本。
-- `tests/`：模块测试。
 - `output/`：所有程序输出。
 - `output/measurements/`：像点量测 TXT。
 - `output/rfm/fixed_height/`：方案一结果。
@@ -118,7 +117,7 @@ RFM 结果命名：
 | `accuracy_dir` | 精度评价结果目录，默认 `output/accuracy/` |
 | `target_table` | 目标映射表路径 |
 | `truth_file` | 真值文件路径 |
-| `roi_size_m` | 初始判读窗口边长，默认 500 |
+| `roi_size_m` | 初始判读窗口边长，默认 200 |
 | `moon_radius_m` | 月球平均半径，默认 1737400 |
 | `lm_max_iterations` | LM 最大迭代次数，默认 50 |
 | `lm_residual_tolerance_px` | 像点残差阈值，默认 1e-4 |
@@ -149,7 +148,7 @@ RFM 结果命名：
 ### 5.1 功能
 
 - 根据目标理论坐标和 RPC 正算得到理论像点。
-- 将理论像点作为 `500 m × 500 m` 窗口中心。
+- 将理论像点作为 `200 m × 200 m` 窗口中心。
 - 使用 libtiff 读取窗口。
 - 使用 OpenCV 显示和调整窗口。
 - 自动生成唯一候选点。
@@ -653,7 +652,6 @@ RMSE_h=\sqrt{\frac{1}{N}\sum D_{horizontal,i}^2}
 - `point_measure_tool`：量测程序入口。
 - `rfm_localize_tool`：RFM 反算程序入口。
 - `accuracy_eval_tool`：精度评定程序入口。
-- `rpc_tests`：CTest 测试入口。
 
 依赖关系：
 
@@ -685,7 +683,7 @@ RMSE_h=\sqrt{\frac{1}{N}\sum D_{horizontal,i}^2}
 - `third_party/libtiff/x64-windows/lib/` 和 `debug/lib/`：libtiff 导入库。
 - `third_party/libtiff/x64-windows/bin/` 和 `debug/bin/`：libtiff DLL。
 
-`third_party/CMakeLists.txt` 直接定义两个导入目标：
+根目录 `CMakeLists.txt` 直接定义两个导入目标：
 
 - `opencv_local`。
 - `tiff_local`。
@@ -740,15 +738,13 @@ Visual Studio 2022 的预设优先使用 `%VSINSTALLDIR%Common7\IDE\CommonExtens
 3. 确认本地 OpenCV 和 libtiff 已位于 `third_party/`。
 4. 使用 CMake Preset 配置项目。
 5. 使用 CMake 构建三个可执行程序。
-6. 使用 CTest 运行模块测试。
-7. 使用参数文件和相对路径运行程序。
+6. 使用参数文件和相对路径运行程序。
 
 首次构建示例流程：
 
 1. 打开 Visual Studio 2022 Developer Command Prompt。
 2. 执行 `cmake --preset vs2022-x64-release`。
 3. 执行 `cmake --build --preset vs2022-x64-release`。
-4. 执行 `ctest --preset vs2022-x64-release`。
 
 用户拿到项目后，需要确保本地 `third_party/opencv` 和 `third_party/libtiff` 存在。CMake 不再下载或编译第三方库。
 
@@ -779,3 +775,4 @@ Visual Studio 2022 的预设优先使用 `%VSINSTALLDIR%Common7\IDE\CommonExtens
 | v0.21 | 2026-10-08 | 说明 manifest 模式与 IDE 无关，补充编译器 triplet 和 IDE 适配规则 |
 | v0.22 | 2026-10-08 | 优先使用 VS2022 Developer Command Prompt、VS CMake/Ninja/vcpkg，并更新数据目录 |
 | v0.23 | 2026-10-08 | 移除自动下载方案，改用本地 OpenCV 和 libtiff 依赖 |
+| v0.24 | 2026-10-08 | 默认判读范围缩减为 200 m，优化显示刷新和中文控制台输出 |

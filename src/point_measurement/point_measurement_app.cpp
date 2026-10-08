@@ -33,7 +33,7 @@ struct Options {
 };
 
 struct UiState {
-    cv::Mat display;
+    cv::Mat display_base;
     cv::Mat_<float> image;
     cv::Point selected;
     double scale = 1.0;
@@ -269,18 +269,23 @@ int run_point_measurement_app(int argc, char** argv) {
     UiState state;
     state.image = roi;
     state.selected = detection.point;
-    state.scale = std::min(
-        1.0,
-        std::min(900.0 / roi.cols, 900.0 / roi.rows));
+    state.scale = 1.0;
+
+    cv::Mat_<float> display_float = make_display_image(state.image);
+    cv::Mat display_gray;
+    display_float.convertTo(display_gray, CV_8U, 255.0);
+    cv::cvtColor(display_gray, state.display_base, cv::COLOR_GRAY2BGR);
 
     cv::namedWindow(window_name, cv::WINDOW_AUTOSIZE);
     cv::setMouseCallback(window_name, on_mouse, &state);
 
     while (true) {
-        cv::Mat_<float> display_float = make_display_image(state.image);
-        cv::Mat display;
-        display_float.convertTo(display, CV_8U, 255.0);
-        cv::cvtColor(display, display, cv::COLOR_GRAY2BGR);
+        if (cv::getWindowProperty(window_name, cv::WND_PROP_VISIBLE) < 1.0) {
+            state.cancelled = true;
+            break;
+        }
+
+        cv::Mat display = state.display_base.clone();
 
         cv::drawMarker(
             display,
@@ -305,7 +310,7 @@ int run_point_measurement_app(int argc, char** argv) {
             2);
         cv::imshow(window_name, display);
 
-        const int key = cv::waitKeyEx(0);
+        const int key = cv::waitKeyEx(10);
         if (key == 'q' || key == 'Q') {
             state.confirmed = true;
             break;

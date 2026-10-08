@@ -16,7 +16,7 @@ struct ProjectConfig {
     std::filesystem::path measurement_dir;
     std::filesystem::path target_table;
     std::filesystem::path truth_file;
-    double roi_size_m = 500.0;
+    double roi_size_m = 200.0;
 };
 
 std::filesystem::path find_project_root(const std::filesystem::path& start);
@@ -38,4 +38,3 @@ std::optional<GeoPoint> find_truth_by_id(
 void ensure_parent_directory(const std::filesystem::path& path);
 
 }  // namespace rpc_localization
-
