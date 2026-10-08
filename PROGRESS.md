@@ -1,7 +1,7 @@
 # Project Progress
 
 > **Last updated:** 2026-10-08
-> **Plan version:** v0.45
+> **Plan version:** v0.46
 
 ## Status Legend
 
@@ -17,7 +17,7 @@
 | ID | Module or Task | Status | Progress | Current Result | Next Step |
 |---|---|---:|---|---|---|
 | P0 | Requirements and data understanding | 已完成 | 100% | Requirement PDF and data inventory complete; data moved to `data/images`, `data/rpc`, and `data/truth` | Keep as reference for implementation |
-| P1 | Technical plan and interfaces | 已完成 | 100% | `TECHNICAL_PLAN.md` v0.45 complete | Implement according to the confirmed interfaces |
+| P1 | Technical plan and interfaces | 已完成 | 100% | `TECHNICAL_PLAN.md` v0.46 complete | Implement according to the confirmed interfaces |
 | P2 | Git repository and remote connection | 已完成 | 100% | GitHub remote configured | Maintain one commit per completed code task |
 | P3 | CMake project scaffold | 已完成 | 100% | MSVC 19.44 Debug/Release configure/build passed with Visual Studio CMake and Ninja; module sources compile directly into one executable, and artifacts are emitted under `build/<preset>/bin` without project-internal `.lib` files | Keep the single-target scaffold stable |
 | P4 | Local third-party dependency setup | 已完成 | 100% | OpenCV 4.12.0 copied into `third_party/opencv`; libtiff 4.7.2 core installed into `third_party/libtiff` | Keep binaries local and ignored by Git |

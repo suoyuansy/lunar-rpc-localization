@@ -208,6 +208,7 @@ void write_result(
 
     output << "reflector_id=" << reflector_id << '\n'
            << "method=" << method << '\n'
+           << "solver=LM\n"
            << "source_images=" << source_image_text << '\n'
            << std::fixed << std::setprecision(10)
            << "longitude=" << solution.point.longitude_deg << '\n'
@@ -225,11 +226,12 @@ void print_solution(
               << ", iterations=" << solution.iterations
               << ", residual_rms_px=" << solution.residual_rms_px
               << ", condition_number=" << solution.condition_number
-              << ", longitude=" << std::setprecision(10)
-              << solution.point.longitude_deg
+              << ", solver=LM"
+              << std::fixed << std::setprecision(10)
+              << ", longitude=" << solution.point.longitude_deg
               << ", latitude=" << solution.point.latitude_deg
-              << ", height_m=" << std::setprecision(4)
-              << solution.point.height_m
+              << std::setprecision(4)
+              << ", height_m=" << solution.point.height_m
               << std::endl;
 }
 
