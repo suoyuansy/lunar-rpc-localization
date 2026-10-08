@@ -18,7 +18,7 @@ struct ProjectConfig {
     std::filesystem::path two_image_dir;
     std::filesystem::path target_table;
     std::filesystem::path truth_file;
-    double roi_size_m = 400.0;
+    double roi_size_m = 500.0;
 };
 
 std::filesystem::path find_project_root(const std::filesystem::path& start);

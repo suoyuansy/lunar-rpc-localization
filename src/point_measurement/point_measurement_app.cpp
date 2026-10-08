@@ -419,7 +419,7 @@ int run_point_measurement_app(int argc, char** argv) {
     UiState state;
     state.image = roi;
     state.selected = detection.point;
-    constexpr double target_display_side = 1000.0;
+    constexpr double target_display_side = 900.0;
     const double source_side =
         static_cast<double>(std::max(roi_width, roi_height));
     state.scale = std::clamp(
