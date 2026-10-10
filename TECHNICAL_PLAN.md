@@ -1,6 +1,6 @@
 # RPC 直接定位技术方案
 
-> **版本：** v0.50（草案）
+> **版本：** v0.51（草案）
 > **状态：** 核心模块实施中
 > **更新日期：** 2026-10-08
 
@@ -92,7 +92,7 @@ RFM 结果命名：
 
 精度文件命名：
 
-- `accuracy_report.txt`。
+- `<method>_accuracy_report.md`。
 
 原始 TIFF、RPC 和真值文件只读，不修改、不覆盖。
 
@@ -564,8 +564,8 @@ LM 的优点：
 
 - 未指定输入时，只扫描所选方法对应的结果目录。
 - 未指定真值文件时，使用 `rpc_project.ini` 中的 `truth_file`。
-- 未指定输出时，方案一保存到 `output/accuracy/fixed_height_accuracy_report.txt`。
-- 未指定输出时，方案二保存到 `output/accuracy/two_image_accuracy_report.txt`。
+- 未指定输出时，方案一保存到 `output/accuracy/fixed_height_accuracy_report.md`。
+- 未指定输出时，方案二保存到 `output/accuracy/two_image_accuracy_report.md`。
 
 错误规则：
 
@@ -858,3 +858,4 @@ Visual Studio 2022 的预设优先使用 `%VSINSTALLDIR%Common7\IDE\CommonExtens
 | v0.48 | 2026-10-08 | 完成批量精度评定模块和 `evaluate` 子命令 |
 | v0.49 | 2026-10-08 | 按方法分别生成精度评定报告，并改为 Markdown 表格 |
 | v0.50 | 2026-10-08 | 删除测试进度条目，项目中不保留 CTest 或 testing 目录配置 |
+| v0.51 | 2026-10-10 | 精度评定报告默认扩展名由 `.txt` 改为 `.md` |

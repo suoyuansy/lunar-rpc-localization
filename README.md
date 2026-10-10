@@ -465,11 +465,12 @@ build\vs2022-x64-debug\bin\lunar_rpc_tool.exe evaluate --method two_image
 默认输出：
 
 ```text
-output\accuracy\fixed_height_accuracy_report.txt
-output\accuracy\two_image_accuracy_report.txt
+output\accuracy\fixed_height_accuracy_report.md
+output\accuracy\two_image_accuracy_report.md
 ```
 
-报告文件名后缀是 `.txt`，内容使用 Markdown 标题和表格，便于直接查看或渲染。
+报告文件名后缀是 `.md`，内容使用 Markdown 标题和表格，便于直接在 VS Code、
+Typora、Obsidian 或 GitHub 中渲染查看。
 
 ## 7. RFM 模型和 LM 反算
 
@@ -630,8 +631,8 @@ height_m=-1840.5657
 ### 10.4 精度报告
 
 ```text
-output\accuracy\fixed_height_accuracy_report.txt
-output\accuracy\two_image_accuracy_report.txt
+output\accuracy\fixed_height_accuracy_report.md
+output\accuracy\two_image_accuracy_report.md
 ```
 
 报告包含：
@@ -718,7 +719,7 @@ build\vs2022-x64-debug\bin\lunar_rpc_tool.exe
 
 ### 12.5 报告内容乱码
 
-程序和报告使用 UTF-8。建议使用 VS Code、Notepad++ 或 GitHub 查看。用支持 Markdown 的编辑器打开 `.txt` 报告时，标题和表格可以正常渲染。
+程序和报告使用 UTF-8。建议使用 VS Code、Typora、Obsidian 或 GitHub 查看 `.md` 报告，标题和表格会自动渲染。
 
 ## 13. Git 和本地文件
 

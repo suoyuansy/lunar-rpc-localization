@@ -99,12 +99,12 @@ void print_help() {
         << "  --input <文件>              指定 RFM 结果 TXT，可重复\n"
         << "  --result-dir <目录>         指定结果目录，可重复\n"
         << "  --truth-file <文件>         覆盖真值文件\n"
-        << "  --output <文件>             指定最终报告 TXT\n"
+        << "  --output <文件>             指定最终报告文件\n"
         << "  --output-dir <目录>         指定报告输出目录\n"
         << "  --help                      显示帮助\n\n"
         << "默认行为:\n"
         << "  未指定输入时只扫描所选方法对应的结果目录。\n"
-        << "  默认报告保存为 output/accuracy/<method>_accuracy_report.txt。\n";
+        << "  默认报告保存为 output/accuracy/<method>_accuracy_report.md。\n";
 }
 
 Options parse_options(int argc, char** argv) {
@@ -495,10 +495,10 @@ int run_accuracy_evaluation_app(int argc, char** argv) {
                                  ? (options.output_dir.empty()
                                         ? config.accuracy_dir /
                                               (options.method +
-                                               "_accuracy_report.txt")
+                                               "_accuracy_report.md")
                                         : options.output_dir /
                                               (options.method +
-                                               "_accuracy_report.txt"))
+                                               "_accuracy_report.md"))
                                  : options.output;
     write_report(output_path, content);
     std::cout << "\n精度报告已保存: " << output_path.u8string() << '\n';
