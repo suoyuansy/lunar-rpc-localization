@@ -568,7 +568,7 @@ int run_point_measurement_app(int argc, char** argv) {
         const cv::Scalar red(0, 0, 255);
         const cv::Scalar black(0, 0, 0);
 
-        // 黑色细描边保证红线和红圈在亮暗背景上都清楚。
+        // 红色十字使用黑色细描边，红圈不描边。
         cv::drawMarker(
             display,
             marker_position,
@@ -584,13 +584,6 @@ int run_point_measurement_app(int argc, char** argv) {
             cv::MARKER_CROSS,
             13,
             1,
-            cv::LINE_AA);
-        cv::circle(
-            display,
-            marker_position,
-            12,
-            black,
-            3,
             cv::LINE_AA);
         cv::circle(
             display,
