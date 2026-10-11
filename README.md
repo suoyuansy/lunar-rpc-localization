@@ -154,7 +154,7 @@ rfm_two_image_dir=output/rfm/two_image
 accuracy_dir=output/accuracy
 target_table=config/targets.csv
 truth_file=data/truth/真值坐标.txt
-roi_size_m=500
+roi_size_m=100
 ```
 
 路径相对于项目根目录。程序运行时会自动向上查找同时包含 `CMakeLists.txt` 和 `config/rpc_project.ini` 的项目根目录。
@@ -347,16 +347,18 @@ build\vs2022-x64-debug\bin\lunar_rpc_tool.exe measure --image-dir data\images --
 
 ```text
 output\measurements\<影像名称>_point_measurement.txt
+output\measurements\<影像名称>_point_measurement.png
 ```
 
-内容：
+TXT 内容：
 
 ```ini
 sample=2486.977
 line=23766.191
 ```
 
-坐标是原影像全局 0 基像素中心坐标。
+坐标是原影像全局 0 基像素中心坐标。PNG 是确认量测点时带红色十字、红圈和
+坐标文字标注的完整判读窗口。
 
 ### 6.2 localize：RFM 经纬度高程反算
 
@@ -565,15 +567,17 @@ LM 方程：
 
 ## 9. 可视化显示
 
-显示使用单通道 8 位 OpenCV 窗口，不改变自动检测使用的 float32 数据。
+灰度底图使用单通道 8 位 OpenCV 窗口，不改变自动检测使用的 float32 数据。
+绘制标注时会复制一份 BGR 显示图，只用于画红色十字、红圈、文字以及保存
+PNG，不参与自动检测，也不改变底层灰度映射。
 
 显示流程：
 
 1. 计算 ROI 有效像素的 `0.1%` 和 `99.9%` 分位值。
 2. 将分位区间线性映射到 `0-255`。
 3. 高于 99.9% 的值截为 255，低于 0.1% 的值截为 0。
-4. 根据 ROI 像素尺寸动态缩放，目标显示边长约 900 pixel。
-5. 显示细十字标记、反射器、影像名称和当前像点坐标。
+4. 根据 ROI 像素尺寸动态缩放，目标显示边长约 600 pixel。
+5. 显示红色十字、红色圆环、反射器、影像名称和当前像点坐标。
 
 窗口左上角显示：
 
@@ -589,12 +593,17 @@ sample=1073.127 line=30150.108
 
 ```text
 output\measurements\<影像名称>_point_measurement.txt
+output\measurements\<影像名称>_point_measurement.png
 ```
+
+TXT 保存最终确认像点：
 
 ```ini
 sample=2486.977
 line=23766.191
 ```
+
+PNG 保存带最终像点标注的完整判读窗口。
 
 ### 10.2 方案一结果
 

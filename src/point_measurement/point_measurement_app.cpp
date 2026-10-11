@@ -13,6 +13,7 @@
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -244,7 +245,7 @@ void draw_outlined_text(
         origin + cv::Point(1, 1),
         cv::FONT_HERSHEY_SIMPLEX,
         fitted_scale,
-        cv::Scalar(0),
+        cv::Scalar(0, 0, 0),
         thickness + 1);
     cv::putText(
         display,
@@ -252,8 +253,34 @@ void draw_outlined_text(
         origin,
         cv::FONT_HERSHEY_SIMPLEX,
         fitted_scale,
-        cv::Scalar(255),
+        cv::Scalar(255, 255, 255),
         thickness);
+}
+
+void write_png_image(
+    const std::filesystem::path& path,
+    const cv::Mat& image) {
+    ensure_parent_directory(path);
+
+    // 先用 OpenCV 在内存中编码，再用二进制文件流写入。
+    // 这样可以兼容包含中文的 Windows 项目路径。
+    std::vector<unsigned char> encoded;
+    if (!cv::imencode(".png", image, encoded) || encoded.empty()) {
+        throw std::runtime_error("PNG 编码失败: " + path.u8string());
+    }
+
+    std::ofstream output(
+        path,
+        std::ios::binary | std::ios::trunc);
+    if (!output) {
+        throw std::runtime_error("无法写标注图: " + path.u8string());
+    }
+    output.write(
+        reinterpret_cast<const char*>(encoded.data()),
+        static_cast<std::streamsize>(encoded.size()));
+    if (!output) {
+        throw std::runtime_error("写标注图失败: " + path.u8string());
+    }
 }
 
 void on_mouse(int event, int x, int y, int, void* userdata) {
@@ -482,8 +509,9 @@ int run_point_measurement_app(int argc, char** argv) {
     UiState state;
     state.image = roi;
     state.selected = detection.point;
-    // 目标显示边长固定约 900 像素，使不同分辨率的影像具有相近可视尺寸。
-    constexpr double target_display_side = 900.0;
+    // 100 m 局部范围内目标通常只占少量像素，600 像素窗口既便于观察，
+    // 也不会因为过度放大而让不同分辨率影像都显得模糊。
+    constexpr double target_display_side = 600.0;
     const double source_side =
         static_cast<double>(std::max(roi_width, roi_height));
     state.scale = std::clamp(
@@ -513,6 +541,14 @@ int run_point_measurement_app(int argc, char** argv) {
     cv::namedWindow(window_name, cv::WINDOW_AUTOSIZE);
     cv::setMouseCallback(window_name, on_mouse, &state);
 
+    const auto output_dir = options.output_dir.empty()
+                                ? config.measurement_dir
+                                : options.output_dir;
+    const auto output_path =
+        output_dir / (image_stem + "_point_measurement.txt");
+    const auto preview_path =
+        output_dir / (image_stem + "_point_measurement.png");
+
     std::cout << "操作提示:\n"
                  "  鼠标左键: 将判读点移动到点击位置\n"
                  "  方向键: 按 0.1 pixel 微调\n"
@@ -520,31 +556,49 @@ int run_point_measurement_app(int argc, char** argv) {
                  "  Esc 或关闭窗口: 取消量测"
               << std::endl;
 
-    while (true) {
-        if (cv::getWindowProperty(window_name, cv::WND_PROP_VISIBLE) < 1.0) {
-            state.cancelled = true;
-            break;
-        }
-
-        cv::Mat display = state.display_base.clone();
+    // 灰度基础图保持单通道；只在显示和保存标注图时复制为 BGR，
+    // 这样红色标记不会改变原始灰度映射，也不会参与自动检测。
+    const auto build_annotated_display = [&]() {
+        cv::Mat display;
+        cv::cvtColor(state.display_base, display, cv::COLOR_GRAY2BGR);
 
         const cv::Point marker_position(
             static_cast<int>(std::lround(state.selected.x * state.scale)),
             static_cast<int>(std::lround(state.selected.y * state.scale)));
+        const cv::Scalar red(0, 0, 255);
+        const cv::Scalar black(0, 0, 0);
+
+        // 黑色细描边保证红线和红圈在亮暗背景上都清楚。
         cv::drawMarker(
             display,
             marker_position,
-            cv::Scalar(0),
+            black,
             cv::MARKER_CROSS,
-            14,
-            2);
+            15,
+            3,
+            cv::LINE_AA);
         cv::drawMarker(
             display,
             marker_position,
-            cv::Scalar(255),
+            red,
             cv::MARKER_CROSS,
-            10,
-            1);
+            13,
+            1,
+            cv::LINE_AA);
+        cv::circle(
+            display,
+            marker_position,
+            12,
+            black,
+            3,
+            cv::LINE_AA);
+        cv::circle(
+            display,
+            marker_position,
+            12,
+            red,
+            2,
+            cv::LINE_AA);
 
         std::ostringstream coordinate_text;
         coordinate_text << std::fixed << std::setprecision(3)
@@ -581,7 +635,16 @@ int run_point_measurement_app(int argc, char** argv) {
             cv::Point(10, display.rows - 12),
             0.45,
             1);
-        cv::imshow(window_name, display);
+        return display;
+    };
+
+    while (true) {
+        if (cv::getWindowProperty(window_name, cv::WND_PROP_VISIBLE) < 1.0) {
+            state.cancelled = true;
+            break;
+        }
+
+        cv::imshow(window_name, build_annotated_display());
 
         const int key = cv::waitKeyEx(10);
         if (key == 'q' || key == 'Q') {
@@ -616,11 +679,6 @@ int run_point_measurement_app(int argc, char** argv) {
         std::cout << "注意: 自动候选置信度较低，已采用人工确认结果。\n";
     }
 
-    const auto output_dir = options.output_dir.empty()
-                                ? config.measurement_dir
-                                : options.output_dir;
-    const auto output_path =
-        output_dir / (image_stem + "_point_measurement.txt");
     const bool output_existed = std::filesystem::exists(output_path);
 
     write_measurement_txt(
@@ -631,6 +689,9 @@ int run_point_measurement_app(int argc, char** argv) {
     std::cout << (output_existed ? "量测结果已保存（已覆盖原文件）: "
                                  : "量测结果已保存: ")
               << output_path.u8string() << '\n';
+
+    write_png_image(preview_path, build_annotated_display());
+    std::cout << "标注图已保存: " << preview_path.u8string() << '\n';
     return 0;
 }
 

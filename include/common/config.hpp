@@ -22,7 +22,7 @@ struct ProjectConfig {
     std::filesystem::path accuracy_dir;
     std::filesystem::path target_table;
     std::filesystem::path truth_file;
-    double roi_size_m = 500.0;
+    double roi_size_m = 100.0;
 };
 
 // 从给定目录开始向上查找项目根目录。
