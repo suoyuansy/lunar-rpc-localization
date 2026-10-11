@@ -566,23 +566,14 @@ int run_point_measurement_app(int argc, char** argv) {
             static_cast<int>(std::lround(state.selected.x * state.scale)),
             static_cast<int>(std::lround(state.selected.y * state.scale)));
         const cv::Scalar red(0, 0, 255);
-        const cv::Scalar black(0, 0, 0);
 
-        // 红色十字使用黑色细描边，红圈不描边。
-        cv::drawMarker(
-            display,
-            marker_position,
-            black,
-            cv::MARKER_CROSS,
-            15,
-            3,
-            cv::LINE_AA);
+        // 十字和圆环都只使用红色，十字保持 1 pixel 细线。
         cv::drawMarker(
             display,
             marker_position,
             red,
             cv::MARKER_CROSS,
-            13,
+            11,
             1,
             cv::LINE_AA);
         cv::circle(
